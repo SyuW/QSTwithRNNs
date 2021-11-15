@@ -30,6 +30,7 @@ class ConventionalRNN(nn.Module):
         super(ConventionalRNN, self).__init__()
         self.main = nn.Sequential(
 
+            nn.LogSoftmax()
         )
         return
 
