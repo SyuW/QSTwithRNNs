@@ -18,7 +18,12 @@ class ConventionalRNN(nn.Module):
 
         return
 
+    def forward(self, x):
+
+        return
+
     def backprop(self):
+
         return
 
     def __init__(self):

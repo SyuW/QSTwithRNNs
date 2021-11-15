@@ -1,0 +1,14 @@
+{
+  "optim": {
+    "learning rate": 0.001,
+    "random seed": 1
+  },
+
+  "data": {
+    "batch size": 50
+  },
+
+  "model": {
+    "hidden units": 100
+  }
+}
