@@ -23,7 +23,7 @@ class ConventionalRNN(nn.Module):
         n_samples = 1000
 
         # hidden vector
-        self.h_init = torch.zeros(hidden_units)
+        self.h_init = torch.zeros(size=(n_samples, hidden_units)).float()
         # input spin
 
         self.gru_cell = nn.GRUCell(input_size=2, hidden_size=hidden_units, bias=True)  # n_h, 2 -> n_h
@@ -32,15 +32,25 @@ class ConventionalRNN(nn.Module):
 
         # input for RNN
         input_batch = torch.zeros(size=(n_samples,), ).long()
-        self.sigma_0 = torch.nn.functional.one_hot(input_batch, classes=2)
+        self.sigma_0 = torch.nn.functional.one_hot(input_batch, num_classes=2).float()
+
+        h, p = self.forward(self.sigma_0, self.h_init)
 
         return
 
     def forward(self, spin, hidden_vec):
         new_hidden_vec = self.gru_cell(spin, hidden_vec)
-        probabilities = self.softmax(new_hidden_vec)
+        linear_output = self.linear(new_hidden_vec)
+        probabilities = self.softmax(linear_output)
 
         return new_hidden_vec, probabilities
+
+    def sample_or_train(self, probabilities, dataset, training):
+        if training == True:
+
+        else:
+
+
 
     def get_data(self):
         return
@@ -50,4 +60,4 @@ class ConventionalRNN(nn.Module):
 
 
 if __name__ == "__main__":
-    pass
+    model = ConventionalRNN()
