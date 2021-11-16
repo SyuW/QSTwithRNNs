@@ -19,7 +19,7 @@ import torch.optim as optim
 def calculate_loss(input, targets):
     """
 
-    :param input: log probabilities from RNN model
+    :param input: raw probabilities from RNN model
     :param targets:
     :return:
     """
@@ -43,16 +43,19 @@ def train(model, dataset, **kwargs):
     # hyperparameters
     learning_rate = 0.001
     display_epochs = 10
+    num_epochs = 100
+    batch_size = 50
 
     # defining the optimizer
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
     # start the training
-    num_epochs = 100
     for epoch in range(num_epochs):
 
         # clear gradients
         optimizer.zero_grad()
+
+        predictions = ConventionalRNN()
 
         # compute the loss
         obj_val = calculate_loss(predictions, targets=)
