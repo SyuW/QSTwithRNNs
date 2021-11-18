@@ -107,8 +107,9 @@ if __name__ == "__main__":
     ################### RUN ME TO SEE THE MODEL CALCULATE N_samples and N_probabilities only onced ###############################
         if k==0:
             print("k",k)
-            Probabilities,Sampled_Spins=model.N_samples(model.n_samples,True,batch)  #INCLUDE DATA WHEN TRAINING TRUE
-            Probabilities,Sampled_Spins=model.N_samples(model.n_samples,False)       #DO NOT INCLUDE DATA WHEN TRAINING NOT TRUE
+            Probabilities,Sampled_Spins= model.N_samples(True, model.n_samples)  #INCLUDE DATA WHEN TRAINING TRUE
+            Probabilities,Sampled_Spins= model.N_samples(False,
+                                                         model.n_samples)  #DO NOT INCLUDE DATA WHEN TRAINING NOT TRUE
             k=1
             print("ONE BATCH IS FINISHED")
             print("####################################################################################################")
