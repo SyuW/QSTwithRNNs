@@ -51,6 +51,7 @@ def train(model, data, **kwargs):
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
     obj_vals = []
+    obj_vals_plot = []
     # start the training
     for epoch in range(num_epochs):
 
@@ -65,6 +66,7 @@ def train(model, data, **kwargs):
 
             # compute the loss
             obj_val = negative_log_loss(config_probabilities)
+            obj_vals.append(obj_val.item())
 
             # calculate gradients and update parameters
             obj_val.backward()
@@ -75,21 +77,21 @@ def train(model, data, **kwargs):
             print(config_probabilities)
             pass
 
-        obj_vals.append(obj_val)
-
         # print out the epoch and loss value every display_epochs
         if (epoch + 1) % display_epochs == 0:
             print(f"Epoch [{epoch + 1}/{num_epochs}\tLoss: {obj_val:.4f}]")
+            obj_vals_plot.append(obj_val.item())
 
     with plt.ioff():
         fig, ax = plt.subplots()
 
-    ax.plot(range(num_epochs), obj_vals)
+    ax.plot(range(num_epochs), obj_vals_plot)
+    ax.scatter(range(num_epochs), obj_vals_plot)
     ax.set_xlabel("Epoch")
     ax.set_ylabel("Negative Log Loss")
     ax.set_title("Loss during training")
 
-    fig.save_fig()
+    fig.savefig("results/loss_plot.png")
 
     # write to report file
     with open('results/report.txt', 'w') as report_file:
