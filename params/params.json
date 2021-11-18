@@ -1,7 +1,8 @@
 {
   "optim": {
     "learning rate": 0.001,
-    "random seed": 1
+    "random seed": 1,
+    "epochs": 10
   },
 
   "data": {
