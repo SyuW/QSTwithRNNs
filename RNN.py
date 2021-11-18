@@ -4,15 +4,11 @@ Recurrent neural network
 Authors: Uzair Lakhani, Luc Andre Ouellet, Jefferson Pule Mendez
 """
 
-import numpy as np
 import argparse
 
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import json
-
-from data import data_load
 
 
 class ConventionalRNN(nn.Module):
@@ -50,23 +46,11 @@ class ConventionalRNN(nn.Module):
         Function returns the new spin configuration (sigma_(n+1)), the one hot encoded version of it and the 
         probability of getting that specific output, given probabilities. 
         
-        RNN_iteration    =  int  
-                            number of spin that the RNN is iterating at the time
-
-        data             =  pytorch tensor
-                            The data set for training. (Useful when data is not required).
-
-        training         =  boolean
-                            Whether we are training using data or not. If false then just sample randomly.
-
-        sample_sigma_n   =  Tensor of size (ns,1)
-                            New set of samples 
-
-        sigma_n_encoded  =  Tensor of size (ns, 2)
-                            One hot encoded of sample_sigma_n
-
-        conditional_prob =  Tensor of size (ns, 2)
-                            Bernoulli distribution for sample_sigma_n on step RNN_iteration
+        :param probabilities: tensor. probability distribution for sampling spin
+        :param rnn_iteration: int. iteration of RNN
+        :param data: tensor. the training dataset (Useful when data is not required)
+        :param training: boolean. whether we are training using data or not. If false then just sample randomly
+        :return: sample_sigma_n, sigma_n_encoded, conditional_prob
         """
 
         n = rnn_iteration
@@ -94,32 +78,23 @@ class ConventionalRNN(nn.Module):
 
         return sample_sigma_n, sigma_n_encoded, conditional_prob
 
-    def train_or_sample(self, batch=[], n_samples=30, training=False, verbose=True):
+    def train_or_sample(self, batch=[], n_samples=30, training=False, verbose=False):
         """
         Function sequentially performs num_spins iterations returning for each iteration
         a sample sigma_i and its conditional probability. The output are two tensors containing
-        the probabilities of a full configuration sigma and the individual conditional probabilities.
+        the sampled spins and the individual conditional probabilities.
 
-        batch             =  pytorch tensor
-                             The data set for training. It will be equal to 1 if not data is provided
-                             (Useful when data is not required).
+        :param batch: pytorch tensor. the data set for training. (useful when data is not required).
+        :param n_samples: int. number of spin configuration samples to generate.
+        :param training: boolean. whether we are training using data or not. if false then just sample randomly.
+        :param verbose: boolean. verbosity level.
 
-        n_samples         =  number of spin configuration samples to generate
-
-        training          =  boolean. 
-                             Whether we are training using data or not. If false then just sample randomly.
-
-        probabilities     =  Tensor of size (batch_size, size_of_system)
-                             Probability of each configuration sigma 
-
-        sampled_spins     =  Tensor of size (batch_size, size_of_system)
-                             Configuration sigma
+        :return: sampled_spins, probabilities
         """
 
         # infer batch size from training dataset
         if training:
             batch_size = batch.shape[0]
-            print(f"working with ns={batch_size}")
         # else, if sampling, use n_samples parameter
         else:
             batch_size = n_samples
@@ -172,5 +147,5 @@ if __name__ == "__main__":
     model = ConventionalRNN(hidden_units, sys_size, random_seed)
     test = torch.tensor([[1, 0, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1], [0, 1, 1, 0], [1, 1, 1, 1],
                          [1, 1, 1, 1], [0, 1, 1, 1]])  # DATA SHOULD BE OUR BATCHES IN TRAINING
-    P, S = model.train_or_sample(batch=test, training=True)  # INCLUDE DATA WHEN TRAINING TRUE
-    P, S = model.train_or_sample(n_samples=30, training=False)  # DO NOT INCLUDE DATA WHEN TRAINING NOT TRUE
+    p, s = model.train_or_sample(batch=test, training=True, verbose=True)  # INCLUDE DATA WHEN TRAINING TRUE
+    p, s = model.train_or_sample(n_samples=30, training=False, verbose=True)  # DO NOT INCLUDE DATA WHEN TRAINING NOT TRUE

@@ -13,123 +13,120 @@ from RNN import ConventionalRNN
 from data import data_load
 
 import torch
-import torch.nn as nn
 import torch.optim as optim
 import json
 
 
-def calculate_loss(input, targets):
+def negative_log_loss(inputs):
     """
+    Compute the negative log loss
 
-    :param input: raw probabilities from RNN model
-    :param targets:
+    :param inputs: tensor. raw probabilities from RNN model
     :return:
     """
 
     # use negative log likelihood for the loss function
-    loss_fn = nn.NLLLoss()
-    loss_val = loss_fn(input, targets)
+    offset = 1e-7
+    loss_val = -torch.log(inputs + offset).mean()
 
     return loss_val
 
 
-def train(model, dataset, **kwargs):
+def train(model, data, **kwargs):
     """
+    train the model
 
+    :param data:
     :param model:
-    :param dataset:
     :param kwargs:
     :return:
     """
 
     # hyperparameters
-    learning_rate = 0.001
+    learning_rate = 0.01
     display_epochs = 10
-    num_epochs = 100
-    batch_size = 50
+    num_epochs = 200
 
     # defining the optimizer
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
+    obj_vals = []
     # start the training
     for epoch in range(num_epochs):
 
-        # clear gradients
-        optimizer.zero_grad()
+        for batch in data:
 
-        predictions = ConventionalRNN()
+            # clear gradients
+            optimizer.zero_grad()
 
-        # compute the loss
-        obj_val = calculate_loss(predictions, targets=2)
+            # calculate probabilities
+            _, probs = model.train_or_sample(batch=batch, training=True, verbose=False)
+            config_probabilities = torch.prod(probs, dim=1, keepdim=True)
 
-        # calculate gradients and update parameters
-        loss.backward()
-        optimizer.step()
+            # compute the loss
+            obj_val = negative_log_loss(config_probabilities)
 
-        if (num_epochs + 1) % display_epochs:
-            print(f"Epoch [{epoch+1}/{num_epochs}\tLoss: {obj_val:.4f}]")
+            # calculate gradients and update parameters
+            obj_val.backward()
+            optimizer.step()
 
+        if kwargs["verbose"]:
+            print(probs)
+            print(config_probabilities)
+            pass
+
+        obj_vals.append(obj_val)
+
+        # print out the epoch and loss value every display_epochs
+        if (epoch + 1) % display_epochs == 0:
+            print(f"Epoch [{epoch + 1}/{num_epochs}\tLoss: {obj_val:.4f}]")
+
+    with plt.ioff():
+        fig, ax = plt.subplots()
+
+    ax.plot(range(num_epochs), obj_vals)
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel("Negative Log Loss")
+    ax.set_title("Loss during training")
+
+    fig.save_fig()
+
+    # write to report file
     with open('results/report.txt', 'w') as report_file:
-        pass
+        report_file.write("-" * 50 + "\nBegin Training Report\n" + "-" * 50 + "\n")
+        for epoch in range(num_epochs):
+            report_file.write(f'Epoch [{epoch + 1}/{num_epochs}]\tLoss: {obj_vals[epoch]:.4f}\n')
+        report_file.write("-" * 50 + "\nEnd Training Report\n" + "-" * 50 + "\n")
 
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Train RNN for Quantum State Tomography")
-    
-    parser.add_argument("-json", default="params/params.json",help="input path to json file")
-    parser.add_argument("-size_of_system", default="4" ,help="Size of our system. Default 10")
-#    parser.add_argument("-results_path", default="results" ,help="file path to results") We need a results folder :v also maybe a src folder. 
+
+    parser.add_argument("-json", default="params/params.json", help="input path to json file")
+    parser.add_argument("-system_size", type=int, default=4, help="Size of our system. Default 10")
+    parser.add_argument("-results_path", default="results", help="file path to results")
     args = parser.parse_args()
-    
-    #Load model parameters variables 
+
+    # Load the model parameters
     with open(args.json, 'r') as f:
-        json_file=json.load(f)
-    
-        lr          = json_file['optim']['learning rate']   
-        random_seed = json_file['optim']['random seed'] #Where do we define the random seed
-        epochs      = json_file['optim']['epochs']    
+        params = json.load(f)
 
-        hidden_units= json_file['model']['hidden units']  
-        batch_size  = json_file['data']['batch size']
-        system_size = int(args.size_of_system)
-        n_samples   = 10                               #Number of samples we want our RNN to use
-                                                        #I made our RNN calculate this automatically if training is True that is ns will be compatible with the size 
-                                                        #our data set, but if training is false it will give you this number of samples. 
+        lr = params['optim']['learning rate']
+        random_seed = params['optim']['random seed']  # Where do we define the random seed
+        epochs = params['optim']['epochs']
+        hidden_units = params['model']['hidden units']
+        batch_size = params['data']['batch size']
+        n_samples = 10
 
-    data=data_load("data/samples_N="+args.size_of_system+"_batch=1", batch_size)
+    # create the data loader
+    data_loader = data_load(f"data/samples_N={args.system_size}_batch=1", params['data']['batch size'])
 
-    k=0 #DELETE THIS K AFTER YOU ARE DONE 
+    # initialize the model
+    rnn = ConventionalRNN(hidden=hidden_units, system_size=args.system_size, seed=random_seed)
 
-    for batch in data:
-        model = ConventionalRNN(hidden_units, system_size,n_samples, random_seed)
-
-    ################### RUN ME TO SEE THE MODEL CALCULATE N_samples and N_probabilities only onced ###############################
-        if k==0:
-            print("k",k)
-            Probabilities,Sampled_Spins= model.N_samples(True, model.n_samples)  #INCLUDE DATA WHEN TRAINING TRUE
-            Probabilities,Sampled_Spins= model.N_samples(False,
-                                                         model.n_samples)  #DO NOT INCLUDE DATA WHEN TRAINING NOT TRUE
-            k=1
-            print("ONE BATCH IS FINISHED")
-            print("####################################################################################################")
-    ################## DELETE ME AFTER YOU UNDERSTAND WHAT IS GOING ON #############################################################
-
-
-    ################## RUN ME TO SEE HOW IT WORKS WITH A SMALL DATA SET YOU MAY WANT TO COMMENT THE PREVIOUS PART SO YOU ONLY SEE THIS PART ##############    
-        #if k==0:
-        #    batch=torch.tensor([[1,0,0,1],[0,1,1,0],[1,0,0,1],[0,1,1,0],[1,1,1,1]]) #DATA SHOULD BE OUR BATCHES IN TRAINING
-        #    Probabilities,Sampled_Spins=model.N_samples(model.n_samples,True,batch)  #INCLUDE DATA WHEN TRAINING TRUE
-        #    Probabilities,Sampled_Spins=model.N_samples(model.n_samples,False)       #DO NOT INCLUDE DATA WHEN TRAINING NOT TRUE
-        #    k=1
-        #    print("ONE BATCH IS FINISHED")
-        #    print("####################################################################################################")
-    ################### DELETE ME AFTER YOU ARE DONE #################################################################################################
-   
-    ################## RUN ME TO SEE THE MODEL CALCULATE N_SAMPLES and N_Probabilities FOR ALL THE BATCHES. I AM THE MOST IMPORTANT ONE DO NOT DELETE ME-USE ME  ##############    
-
-#        Probabilities,Sampled_Spins=model.N_samples(model.n_samples,True,batch)  #INCLUDE DATA WHEN TRAINING TRUE
-#        Probabilities,Sampled_Spins=model.N_samples(model.n_samples,False)       #DO NOT INCLUDE DATA WHEN TRAINING NOT TRUE
-#        print("ONE BATCH IS FINISHED")
-#        print("####################################################################################################")
-
+    # start training
+    import time
+    start = time.time()
+    train(rnn, data=data_loader, verbose=False)
+    print(f"Execution time: {time.time() - start} seconds")
