@@ -2,7 +2,7 @@
   "optim": {
     "learning rate": 0.001,
     "random seed": 1,
-    "epochs": 10
+    "epochs": 200
   },
 
   "data": {
@@ -11,5 +11,9 @@
 
   "model": {
     "hidden units": 100
+  },
+
+  "misc": {
+    "verbose": 1
   }
 }
