@@ -1,10 +1,10 @@
 """
 Training procedure
-
 Authors: Sam Yu
 """
 
 import argparse
+import os
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -20,7 +20,6 @@ import json
 def negative_log_loss(inputs):
     """
     Compute the negative log loss
-
     :param inputs: tensor. raw probabilities from RNN model
     :return:
     """
@@ -32,10 +31,20 @@ def negative_log_loss(inputs):
     return loss_val
 
 
-def train(model, data, **kwargs):
+def calculate_nonzero_sz_percent(samples):
+
+    # convert back to eigenvalues for S_z
+    num_sz_not_zero = torch.nonzero(torch.sum(samples - 1/2, dim=1)).shape[0]
+    total = samples.shape[0]
+    nonzero_sz = num_sz_not_zero / total
+
+    return nonzero_sz
+
+
+def train(model, data, results_path, symmetry=False, **kwargs):
     """
     train the model
-
+    :param results_path:
     :param data:
     :param model:
     :param kwargs:
@@ -45,13 +54,13 @@ def train(model, data, **kwargs):
     # hyperparameters
     learning_rate = 0.01
     display_epochs = 10
-    num_epochs = 200
+    num_epochs = 100
 
     # defining the optimizer
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
     obj_vals = []
-    obj_vals_plot = []
+    nonzero_sz_vals = []
     # start the training
     for epoch in range(num_epochs):
 
@@ -61,40 +70,54 @@ def train(model, data, **kwargs):
             optimizer.zero_grad()
 
             # calculate probabilities
-            _, probs = model.train_or_sample(batch=batch, training=True, verbose=False)
+            sampled_spins, probs = model.train_or_sample(symmetry, batch=batch, training=True, verbose=False)
             config_probabilities = torch.prod(probs, dim=1, keepdim=True)
 
             # compute the loss
             obj_val = negative_log_loss(config_probabilities)
-            obj_vals.append(obj_val.item())
 
             # calculate gradients and update parameters
             obj_val.backward()
             optimizer.step()
 
-        if kwargs["verbose"]:
-            print(probs)
-            print(config_probabilities)
-            pass
+        # sample from RNN probability distribution at the end of each epoch
+        with torch.no_grad():
+            samples, _ = model.train_or_sample(symmetry, n_samples=1000, training=False, verbose=False)
+            nonzero_sz_percent = calculate_nonzero_sz_percent(samples)
+            nonzero_sz_vals.append(nonzero_sz_percent)
+
+
+        # use loss value for last batch of epoch for plot
+        obj_vals.append(obj_val.item())
 
         # print out the epoch and loss value every display_epochs
         if (epoch + 1) % display_epochs == 0:
             print(f"Epoch [{epoch + 1}/{num_epochs}\tLoss: {obj_val:.4f}]")
-            obj_vals_plot.append(obj_val.item())
 
-    with plt.ioff():
-        fig, ax = plt.subplots()
+    # create all the plots
+    
+    loss_fig, loss_ax = plt.subplots()
+    sz_fig, sz_ax = plt.subplots()
 
-    ax.plot(range(num_epochs), obj_vals_plot)
-    ax.scatter(range(num_epochs), obj_vals_plot)
-    ax.set_xlabel("Epoch")
-    ax.set_ylabel("Negative Log Loss")
-    ax.set_title("Loss during training")
+    loss_ax.plot(range(num_epochs), obj_vals, color="red")
+    loss_ax.set_xlabel("Epoch")
+    loss_ax.set_ylabel("Negative Log Loss")
+    loss_ax.set_title(f"Loss vs epoch for N={batch.shape[1]}")
+    loss_fig.savefig(os.path.join(results_path, "loss_plot.png"))
 
-    fig.savefig("results/loss_plot.png")
+    sz_ax.plot(range(num_epochs), nonzero_sz_vals, color="red")
+    sz_ax.set_xlabel("Epoch")
+    sz_ax.set_ylabel(r"Percentage of samples with $S_z \neq 0$")
+    sz_ax.set_title(r"Fraction of samples with $S_z \neq 0$" + f"for N={batch.shape[1]}")
+    sz_fig.savefig(os.path.join(results_path, "nonzero_sz_plot.png"))
+    plt.show()
+
+    # save the arrays with loss values and S_z non-zero
+    np.save(os.path.join(results_path, f"loss_N_{batch.shape[1]}.npy"), np.array(obj_vals))
+    np.save(os.path.join(results_path, f"sz_N_{batch.shape[1]}.npy"), np.array(nonzero_sz_vals))
 
     # write to report file
-    with open('results/report.txt', 'w') as report_file:
+    with open(os.path.join(results_path, "report.txt"), 'w') as report_file:
         report_file.write("-" * 50 + "\nBegin Training Report\n" + "-" * 50 + "\n")
         for epoch in range(num_epochs):
             report_file.write(f'Epoch [{epoch + 1}/{num_epochs}]\tLoss: {obj_vals[epoch]:.4f}\n')
@@ -104,7 +127,6 @@ def train(model, data, **kwargs):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Train RNN for Quantum State Tomography")
-
     parser.add_argument("-json", default="params/params.json", help="input path to json file")
     parser.add_argument("-system_size", type=int, default=4, help="Size of our system. Default 10")
     parser.add_argument("-results_path", default="results", help="file path to results")
@@ -121,6 +143,10 @@ if __name__ == "__main__":
         batch_size = params['data']['batch size']
         n_samples = 10
 
+    # make the directory to store results at
+    save_path = os.path.join(args.results_path, f"N={args.system_size}")
+    os.makedirs(save_path, exist_ok=True)
+
     # create the data loader
     data_loader = data_load(f"data/samples_N={args.system_size}_batch=1", params['data']['batch size'])
 
@@ -130,5 +156,5 @@ if __name__ == "__main__":
     # start training
     import time
     start = time.time()
-    train(rnn, data=data_loader, verbose=False)
+    train(rnn, data=data_loader, results_path=save_path, symmetry=False, verbose=False)
     print(f"Execution time: {time.time() - start} seconds")
