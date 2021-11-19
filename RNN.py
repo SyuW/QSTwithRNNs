@@ -137,6 +137,17 @@ class ConventionalRNN(nn.Module):
             print(f"Input data: {batch}")
 
         return sampled_spins, probabilities
+        
+    def enforce_symmetry(self, prob, spin, system_size):
+        Number_of_sampled_spins=spin.size()[1]
+        N_pos = torch.sum(spin, dim = 1, keepdim=True)
+        N_neg = Number_of_sampled_spins - N_pos
+        N_half=system_size/2
+        heaviside = torch.where(torch.cat([N_pos, N_neg], dim = 1) >= N_half, 0,1)
+
+        return (prob * heaviside)/(torch.sum(prob * heaviside, dim = 1, keepdim=True))
+
+    
 
 
 if __name__ == "__main__":
