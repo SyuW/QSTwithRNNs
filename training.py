@@ -72,7 +72,7 @@ def train(model, data, results_path, **kwargs):
             optimizer.zero_grad()
 
             # calculate probabilities
-            sampled_spins, probs = model.train_or_sample(symmetry, batch=batch, training=True, verbose=False)
+            sampled_spins, probs = model.train_or_sample(batch=batch, training=True, verbose=False)
             config_probabilities = torch.prod(probs, dim=1, keepdim=True)
 
             # compute the loss
@@ -150,10 +150,10 @@ if __name__ == "__main__":
 
     # create the data loader
     data_loader = load_data(f"data/samples_N={args.system_size}_batch=1", params['data']['batch size'])
-    GS_psi, DMRG_energy = load_observables(N) 
+    GS_psi, DMRG_energy = load_observables(args.system_size) 
 
     # initialize the model
-    rnn = ConventionalRNN(hidden=hidden_units, system_size=args.system_size, seed=random_seed)
+    rnn = ConventionalRNN(hidden=hidden_units, system_size=args.system_size, seed=random_seed, symmetric=False)
 
     # start training
     import time

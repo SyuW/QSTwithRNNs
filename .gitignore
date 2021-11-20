@@ -132,8 +132,8 @@ dmypy.json
 *.idea
 
 # Custom
-*.vs/*
-__pycache__
+*/.vs/*
+__/pycache__/
 
 # Outputs
 *.png
