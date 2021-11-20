@@ -41,9 +41,11 @@ def calculate_nonzero_sz_percent(samples):
     return nonzero_sz
 
 
-def train(model, data, results_path, symmetry=False, **kwargs):
+
+def train(model, data, results_path, **kwargs):
     """
     train the model
+
     :param results_path:
     :param data:
     :param model:
@@ -82,10 +84,9 @@ def train(model, data, results_path, symmetry=False, **kwargs):
 
         # sample from RNN probability distribution at the end of each epoch
         with torch.no_grad():
-            samples, _ = model.train_or_sample(symmetry, n_samples=1000, training=False, verbose=False)
+            samples, _ = model.train_or_sample(n_samples=1000, training=False, verbose=False)
             nonzero_sz_percent = calculate_nonzero_sz_percent(samples)
             nonzero_sz_vals.append(nonzero_sz_percent)
-
 
         # use loss value for last batch of epoch for plot
         obj_vals.append(obj_val.item())
@@ -95,7 +96,7 @@ def train(model, data, results_path, symmetry=False, **kwargs):
             print(f"Epoch [{epoch + 1}/{num_epochs}\tLoss: {obj_val:.4f}]")
 
     # create all the plots
-    
+
     with plt.ioff():
         loss_fig, loss_ax = plt.subplots()
         sz_fig, sz_ax = plt.subplots()
@@ -111,7 +112,6 @@ def train(model, data, results_path, symmetry=False, **kwargs):
     sz_ax.set_ylabel(r"Percentage of samples with $S_z \neq 0$")
     sz_ax.set_title(r"Fraction of samples with $S_z \neq 0$" + f"for N={batch.shape[1]}")
     sz_fig.savefig(os.path.join(results_path, "nonzero_sz_plot.png"))
-    
 
     # save the arrays with loss values and S_z non-zero
     np.save(os.path.join(results_path, f"loss_N_{batch.shape[1]}.npy"), np.array(obj_vals))
@@ -158,5 +158,7 @@ if __name__ == "__main__":
     # start training
     import time
     start = time.time()
-    train(rnn, data=data_loader, results_path=save_path, symmetry=False, verbose=False)
+
+    train(rnn, data=data_loader, results_path=save_path, verbose=False)
     print(f"Execution time: {time.time() - start} seconds")
+
