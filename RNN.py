@@ -13,7 +13,7 @@ import json
 
 class ConventionalRNN(nn.Module):
 
-    def __init__(self, hidden, symmetric, system_size, seed):
+    def __init__(self, hidden, system_size, seed, symmetric=False):
         super(ConventionalRNN, self).__init__()
 
         # parameters
@@ -22,7 +22,7 @@ class ConventionalRNN(nn.Module):
         self.num_spins = system_size
 
         # whether to impose U(1) symmetry on RNN
-        self.symmetry = True
+        self.symmetry = symmetric
 
         # recurrent cell architecture
         self.gru_cell = nn.GRUCell(input_size=2, hidden_size=self.hidden_units, bias=True)  # n_h, 2 -> n_h
@@ -139,6 +139,7 @@ class ConventionalRNN(nn.Module):
                 sampled_spins = torch.cat([sampled_spins, sampled_spin], dim=1)
 
         if verbose:
+            print(f"Symmetry: {self.symmetry}")
             print(f"Training mode: {training}")
             print(f"Probabilities: {probabilities}")
             print(f"Generated sample: {sampled_spins}")
@@ -166,8 +167,9 @@ if __name__ == "__main__":
     test = torch.tensor([[1, 0, 0, 1], [0, 1, 1, 0], [1, 0, 1, 0], [1, 1, 0, 0], [0, 1, 0, 1],
                          [0, 0, 1, 1]])  # DATA SHOULD BE OUR BATCHES IN TRAINING
     p, s = model.train_or_sample(batch=test, training=True,
-                                 verbose=False)  # INCLUDE DATA WHEN TRAINING TRUE
+                                 verbose=True)  # INCLUDE DATA WHEN TRAINING TRUE
+    model = ConventionalRNN(hidden_units, sys_size, random_seed, symmetric=False)
     p, s = model.train_or_sample(batch=test, training=True,
-                                 verbose=False)  # INCLUDE DATA WHEN TRAINING TRUE
+                                 verbose=True)  # INCLUDE DATA WHEN TRAINING TRUE
     p, s = model.train_or_sample(n_samples=30, training=False,
                                  verbose=False)  # DO NOT INCLUDE DATA WHEN TRAINING NOT TRUE
