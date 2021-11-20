@@ -13,13 +13,16 @@ import json
 
 class ConventionalRNN(nn.Module):
 
-    def __init__(self, hidden, system_size, seed):
+    def __init__(self, hidden, symmetric, system_size, seed):
         super(ConventionalRNN, self).__init__()
 
         # parameters
         self.hidden_units = hidden
         self.random_seed = seed
         self.num_spins = system_size
+
+        # whether to impose U(1) symmetry on RNN
+        self.symmetry = True
 
         # recurrent cell architecture
         self.gru_cell = nn.GRUCell(input_size=2, hidden_size=self.hidden_units, bias=True)  # n_h, 2 -> n_h
@@ -78,7 +81,7 @@ class ConventionalRNN(nn.Module):
 
         return sample_sigma_n, sigma_n_encoded, conditional_prob
 
-    def train_or_sample(self, symmetry, batch=[], n_samples=30, training=False, verbose=False):
+    def train_or_sample(self, batch=[], n_samples=30, training=False, verbose=False):
         """
         Function sequentially performs num_spins iterations returning for each iteration
         a sample sigma_i and its conditional probability. The output are two tensors containing
@@ -118,11 +121,11 @@ class ConventionalRNN(nn.Module):
             h_n, prob = self.forward(sigma_n, h_n)
 
             # impose symmetry
-            if symmetry:
-                if n!=0:
-                    prob=self.enforce_symmetry(prob, sampled_spins, self.num_spins) 
+            if self.symmetry:
+                if n != 0:
+                    prob = self.enforce_symmetry(prob, sampled_spins, self.num_spins)
 
-            # get the next spin
+                    # get the next spin
             sampled_spin, sigma_n, conditional_prob = self.get_next_spin_and_prob(n, prob, batch, training)
 
             # if initial recurrent cell, simply add since variables were initialized to zero
@@ -135,7 +138,6 @@ class ConventionalRNN(nn.Module):
                 probabilities = torch.cat([probabilities, conditional_prob], dim=1)
                 sampled_spins = torch.cat([sampled_spins, sampled_spin], dim=1)
 
-
         if verbose:
             print(f"Training mode: {training}")
             print(f"Probabilities: {probabilities}")
@@ -143,26 +145,16 @@ class ConventionalRNN(nn.Module):
             print(f"Input data: {batch}")
 
         return sampled_spins, probabilities
-        
-    def enforce_symmetry(self, prob, spin, system_size):
-        Number_of_sampled_spins=spin.size()[1]
-        N_pos = torch.sum(spin, dim = 1, keepdim=True)
-        N_neg = Number_of_sampled_spins - N_pos
-        N_half=system_size/2
-        heaviside = torch.where(torch.cat([N_pos, N_neg], dim = 1) >= N_half, 0,1)
 
-        return (prob * heaviside)/(torch.sum(prob * heaviside, dim = 1, keepdim=True))
-
-    
-
-    def enforce_symmetry(self, prob, sampled_spins, num_spins):
+    @staticmethod
+    def enforce_symmetry(prob, sampled_spins, num_spins):
 
         N_sampled_spins = sampled_spins.size()[1]
-        N_pos  = torch.sum(sampled_spins, dim = 1, keepdim=True)
-        N_neg  = N_sampled_spins - N_pos
-        N_half = num_spins/2
-        heaviside = torch.where(torch.cat([N_neg,N_pos], dim = 1) >= N_half, 0,1)
-        return (prob * heaviside)/(torch.sum(prob * heaviside, dim = 1, keepdim=True))
+        N_pos = torch.sum(sampled_spins, dim=1, keepdim=True)
+        N_neg = N_sampled_spins - N_pos
+        N_half = num_spins / 2
+        heaviside = torch.where(torch.cat([N_neg, N_pos], dim=1) >= N_half, 0, 1)
+        return (prob * heaviside) / (torch.sum(prob * heaviside, dim=1, keepdim=True))
 
 
 if __name__ == "__main__":
@@ -170,9 +162,12 @@ if __name__ == "__main__":
     random_seed = 1
     sys_size = 4
 
-    model = ConventionalRNN(hidden_units, sys_size, random_seed)
-    test = torch.tensor([[1, 0, 0, 1], [0, 1, 1, 0], [1, 0, 1, 0], [1, 1, 0, 0],[0,1,0,1],
+    model = ConventionalRNN(hidden_units, sys_size, random_seed, symmetric=True)
+    test = torch.tensor([[1, 0, 0, 1], [0, 1, 1, 0], [1, 0, 1, 0], [1, 1, 0, 0], [0, 1, 0, 1],
                          [0, 0, 1, 1]])  # DATA SHOULD BE OUR BATCHES IN TRAINING
-    p, s = model.train_or_sample(symmetry=True,batch=test, training=True, verbose=False)  # INCLUDE DATA WHEN TRAINING TRUE
-    p, s = model.train_or_sample(symmetry=False,batch=test, training=True, verbose=False)  # INCLUDE DATA WHEN TRAINING TRUE
-    p, s = model.train_or_sample(symmetry=True, n_samples=30, training=False, verbose=False)  # DO NOT INCLUDE DATA WHEN TRAINING NOT TRUE
+    p, s = model.train_or_sample(batch=test, training=True,
+                                 verbose=False)  # INCLUDE DATA WHEN TRAINING TRUE
+    p, s = model.train_or_sample(batch=test, training=True,
+                                 verbose=False)  # INCLUDE DATA WHEN TRAINING TRUE
+    p, s = model.train_or_sample(n_samples=30, training=False,
+                                 verbose=False)  # DO NOT INCLUDE DATA WHEN TRAINING NOT TRUE
