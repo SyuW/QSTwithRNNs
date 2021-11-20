@@ -130,3 +130,12 @@ dmypy.json
 
 # PyCharm stuff
 *.idea
+
+# Custom
+*.vs/*
+__pycache__
+
+# Outputs
+*.png
+*.txt
+*.npy

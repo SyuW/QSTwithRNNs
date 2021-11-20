@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from RNN import ConventionalRNN
-from data import data_load
+from data import load_data, load_observables 
 
 import torch
 import torch.optim as optim
@@ -96,8 +96,9 @@ def train(model, data, results_path, symmetry=False, **kwargs):
 
     # create all the plots
     
-    loss_fig, loss_ax = plt.subplots()
-    sz_fig, sz_ax = plt.subplots()
+    with plt.ioff():
+        loss_fig, loss_ax = plt.subplots()
+        sz_fig, sz_ax = plt.subplots()
 
     loss_ax.plot(range(num_epochs), obj_vals, color="red")
     loss_ax.set_xlabel("Epoch")
@@ -110,7 +111,7 @@ def train(model, data, results_path, symmetry=False, **kwargs):
     sz_ax.set_ylabel(r"Percentage of samples with $S_z \neq 0$")
     sz_ax.set_title(r"Fraction of samples with $S_z \neq 0$" + f"for N={batch.shape[1]}")
     sz_fig.savefig(os.path.join(results_path, "nonzero_sz_plot.png"))
-    plt.show()
+    
 
     # save the arrays with loss values and S_z non-zero
     np.save(os.path.join(results_path, f"loss_N_{batch.shape[1]}.npy"), np.array(obj_vals))
@@ -148,7 +149,8 @@ if __name__ == "__main__":
     os.makedirs(save_path, exist_ok=True)
 
     # create the data loader
-    data_loader = data_load(f"data/samples_N={args.system_size}_batch=1", params['data']['batch size'])
+    data_loader = load_data(f"data/samples_N={args.system_size}_batch=1", params['data']['batch size'])
+    GS_psi, DMRG_energy = load_observables(N) 
 
     # initialize the model
     rnn = ConventionalRNN(hidden=hidden_units, system_size=args.system_size, seed=random_seed)

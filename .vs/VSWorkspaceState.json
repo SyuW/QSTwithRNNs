@@ -1,6 +1,8 @@
 {
   "ExpandedNodes": [
-    ""
+    "",
+    "\\data",
+    "\\results"
   ],
   "SelectedNode": "\\training.py",
   "PreviewInSolutionExplorer": false
