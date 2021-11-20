@@ -78,7 +78,7 @@ class ConventionalRNN(nn.Module):
 
         return sample_sigma_n, sigma_n_encoded, conditional_prob
 
-    def train_or_sample(self, batch=[], n_samples=30, training=False, verbose=False):
+    def train_or_sample(self, symmetry, batch=[], n_samples=30, training=False, verbose=False):
         """
         Function sequentially performs num_spins iterations returning for each iteration
         a sample sigma_i and its conditional probability. The output are two tensors containing
@@ -117,6 +117,11 @@ class ConventionalRNN(nn.Module):
             # update the hidden vector and obtain probability distribution for next spin
             h_n, prob = self.forward(sigma_n, h_n)
 
+            # impose symmetry
+            if symmetry:
+                if n!=0:
+                    prob=self.enforce_symmetry(prob, sampled_spins, self.num_spins) 
+
             # get the next spin
             sampled_spin, sigma_n, conditional_prob = self.get_next_spin_and_prob(n, prob, batch, training)
 
@@ -129,6 +134,7 @@ class ConventionalRNN(nn.Module):
             else:
                 probabilities = torch.cat([probabilities, conditional_prob], dim=1)
                 sampled_spins = torch.cat([sampled_spins, sampled_spin], dim=1)
+
 
         if verbose:
             print(f"Training mode: {training}")
@@ -149,6 +155,15 @@ class ConventionalRNN(nn.Module):
 
     
 
+    def enforce_symmetry(self, prob, sampled_spins, num_spins):
+
+        N_sampled_spins = sampled_spins.size()[1]
+        N_pos  = torch.sum(sampled_spins, dim = 1, keepdim=True)
+        N_neg  = N_sampled_spins - N_pos
+        N_half = num_spins/2
+        heaviside = torch.where(torch.cat([N_neg,N_pos], dim = 1) >= N_half, 0,1)
+        return (prob * heaviside)/(torch.sum(prob * heaviside, dim = 1, keepdim=True))
+
 
 if __name__ == "__main__":
     hidden_units = 100
@@ -156,7 +171,8 @@ if __name__ == "__main__":
     sys_size = 4
 
     model = ConventionalRNN(hidden_units, sys_size, random_seed)
-    test = torch.tensor([[1, 0, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1], [0, 1, 1, 0], [1, 1, 1, 1],
-                         [1, 1, 1, 1], [0, 1, 1, 1]])  # DATA SHOULD BE OUR BATCHES IN TRAINING
-    p, s = model.train_or_sample(batch=test, training=True, verbose=True)  # INCLUDE DATA WHEN TRAINING TRUE
-    p, s = model.train_or_sample(n_samples=30, training=False, verbose=True)  # DO NOT INCLUDE DATA WHEN TRAINING NOT TRUE
+    test = torch.tensor([[1, 0, 0, 1], [0, 1, 1, 0], [1, 0, 1, 0], [1, 1, 0, 0],[0,1,0,1],
+                         [0, 0, 1, 1]])  # DATA SHOULD BE OUR BATCHES IN TRAINING
+    p, s = model.train_or_sample(symmetry=True,batch=test, training=True, verbose=False)  # INCLUDE DATA WHEN TRAINING TRUE
+    p, s = model.train_or_sample(symmetry=False,batch=test, training=True, verbose=False)  # INCLUDE DATA WHEN TRAINING TRUE
+    p, s = model.train_or_sample(symmetry=True, n_samples=30, training=False, verbose=False)  # DO NOT INCLUDE DATA WHEN TRAINING NOT TRUE

@@ -1,6 +1,5 @@
 """
 Training procedure
-
 Authors: Sam Yu
 """
 
@@ -11,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from RNN import ConventionalRNN
-from data import data_load
+from data import load_data, load_observables 
 
 import torch
 import torch.optim as optim
@@ -21,7 +20,6 @@ import json
 def negative_log_loss(inputs):
     """
     Compute the negative log loss
-
     :param inputs: tensor. raw probabilities from RNN model
     :return:
     """
@@ -43,6 +41,7 @@ def calculate_nonzero_sz_percent(samples):
     return nonzero_sz
 
 
+
 def train(model, data, results_path, **kwargs):
     """
     train the model
@@ -57,7 +56,7 @@ def train(model, data, results_path, **kwargs):
     # hyperparameters
     learning_rate = 0.01
     display_epochs = 10
-    num_epochs = 200
+    num_epochs = 100
 
     # defining the optimizer
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
@@ -73,7 +72,7 @@ def train(model, data, results_path, **kwargs):
             optimizer.zero_grad()
 
             # calculate probabilities
-            _, probs = model.train_or_sample(batch=batch, training=True, verbose=False)
+            sampled_spins, probs = model.train_or_sample(symmetry, batch=batch, training=True, verbose=False)
             config_probabilities = torch.prod(probs, dim=1, keepdim=True)
 
             # compute the loss
@@ -97,6 +96,7 @@ def train(model, data, results_path, **kwargs):
             print(f"Epoch [{epoch + 1}/{num_epochs}\tLoss: {obj_val:.4f}]")
 
     # create all the plots
+
     with plt.ioff():
         loss_fig, loss_ax = plt.subplots()
         sz_fig, sz_ax = plt.subplots()
@@ -149,7 +149,8 @@ if __name__ == "__main__":
     os.makedirs(save_path, exist_ok=True)
 
     # create the data loader
-    data_loader = data_load(f"data/samples_N={args.system_size}_batch=1", params['data']['batch size'])
+    data_loader = load_data(f"data/samples_N={args.system_size}_batch=1", params['data']['batch size'])
+    GS_psi, DMRG_energy = load_observables(N) 
 
     # initialize the model
     rnn = ConventionalRNN(hidden=hidden_units, system_size=args.system_size, seed=random_seed)
@@ -157,5 +158,7 @@ if __name__ == "__main__":
     # start training
     import time
     start = time.time()
+
     train(rnn, data=data_loader, results_path=save_path, verbose=False)
     print(f"Execution time: {time.time() - start} seconds")
+
