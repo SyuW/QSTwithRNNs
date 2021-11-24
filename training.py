@@ -1,6 +1,6 @@
 """
 Training procedure
-Authors: Sam Yu
+Authors: Sam Yu, Jefferson Pule Mendez, Luc Andre Ouellet
 """
 
 import argparse
@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from RNN import ConventionalRNN
-from data import load_data, load_observables 
+from data import load_data, load_observables
 
 import torch
 import torch.optim as optim
@@ -32,14 +32,17 @@ def negative_log_loss(inputs):
 
 
 def calculate_nonzero_sz_percent(samples):
-
+    """
+    Compute the percentage of samples with non-zero net magnetization
+    :param samples:
+    :return:
+    """
     # convert back to eigenvalues for S_z
-    num_sz_not_zero = torch.nonzero(torch.sum(samples - 1/2, dim=1)).shape[0]
+    num_sz_not_zero = torch.nonzero(torch.sum(samples - 1 / 2, dim=1)).shape[0]
     total = samples.shape[0]
     nonzero_sz = num_sz_not_zero / total
 
     return nonzero_sz
-
 
 
 def train(model, data, results_path, **kwargs):
@@ -67,7 +70,6 @@ def train(model, data, results_path, **kwargs):
     for epoch in range(num_epochs):
 
         for batch in data:
-
             # clear gradients
             optimizer.zero_grad()
 
@@ -96,21 +98,22 @@ def train(model, data, results_path, **kwargs):
             print(f"Epoch [{epoch + 1}/{num_epochs}\tLoss: {obj_val:.4f}]")
 
     # create all the plots
-
     with plt.ioff():
         loss_fig, loss_ax = plt.subplots()
         sz_fig, sz_ax = plt.subplots()
 
+    # loss plot
     loss_ax.plot(range(num_epochs), obj_vals, color="red")
     loss_ax.set_xlabel("Epoch")
     loss_ax.set_ylabel("Negative Log Loss")
     loss_ax.set_title(f"Loss vs epoch for N={batch.shape[1]}")
     loss_fig.savefig(os.path.join(results_path, "loss_plot.png"))
 
+    # non-zero S_z samples plot
     sz_ax.plot(range(num_epochs), nonzero_sz_vals, color="red")
     sz_ax.set_xlabel("Epoch")
     sz_ax.set_ylabel(r"Percentage of samples with $S_z \neq 0$")
-    sz_ax.set_title(r"Fraction of samples with $S_z \neq 0$" + f"for N={batch.shape[1]}")
+    sz_ax.set_title(r"Fraction of samples with $S_z \neq 0$ " + f"for N={batch.shape[1]}")
     sz_fig.savefig(os.path.join(results_path, "nonzero_sz_plot.png"))
 
     # save the arrays with loss values and S_z non-zero
@@ -126,7 +129,6 @@ def train(model, data, results_path, **kwargs):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(description="Train RNN for Quantum State Tomography")
     parser.add_argument("-json", default="params/params.json", help="input path to json file")
     parser.add_argument("-system_size", type=int, default=4, help="Size of our system. Default 10")
@@ -150,7 +152,7 @@ if __name__ == "__main__":
 
     # create the data loader
     data_loader = load_data(f"data/samples_N={args.system_size}_batch=1", params['data']['batch size'])
-    GS_psi, DMRG_energy = load_observables(args.system_size) 
+    GS_psi, DMRG_energy = load_observables(args.system_size)
 
     # initialize the model
     rnn = ConventionalRNN(hidden=hidden_units, system_size=args.system_size, seed=random_seed, symmetric=False)
@@ -158,7 +160,5 @@ if __name__ == "__main__":
     # start training
     import time
     start = time.time()
-
     train(rnn, data=data_loader, results_path=save_path, verbose=False)
     print(f"Execution time: {time.time() - start} seconds")
-
