@@ -45,10 +45,12 @@ def calculate_nonzero_sz_percent(samples):
     return nonzero_sz
 
 
-def train(model, data, results_path, num_epochs, display_epochs, learning_rate, verbose=True):
+def train(model, data, results_path, num_epochs, display_epochs, learning_rate, truth_energy, verbose=True):
     """
     train the model
 
+    :param truth_energy:
+    :param verbose:
     :param learning_rate:
     :param display_epochs:
     :param num_epochs:
@@ -84,17 +86,20 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate, 
         # sample from RNN probability distribution at the end of each epoch
         with torch.no_grad():
             samples, _ = model.get_samples_and_probs(n_samples=1000, get_same_sample=False, verbose=False)
+            # calculate percentage of samples with Sz non-zero
             nonzero_sz_percent = calculate_nonzero_sz_percent(samples)
             nonzero_sz_vals.append(nonzero_sz_percent)
-
-
+            # calculate the energy difference
+            rnn_energy_per_spin = model.calculate_xy_energy(samples) / model.num_spins
+            energy_diff = torch.abs(rnn_energy_per_spin - truth_energy)
 
         # use loss value for last batch of epoch for plot
         obj_vals.append(obj_val.item())
 
         # print out the epoch and loss value every display_epochs
         if (epoch + 1) % display_epochs == 0:
-            print(f"Epoch [{epoch + 1}/{num_epochs}\tLoss: {obj_val:.4f}]")
+            print(f"Epoch [{epoch + 1}/{num_epochs}\tLoss: {obj_val:.4f}]\tEnergy diff: {energy_diff:.4f}")
+            print(f"Energy: {rnn_energy_per_spin}")
 
     # create all the plots
     with plt.ioff():
@@ -156,16 +161,16 @@ if __name__ == "__main__":
 
     # create the data loader
     data_loader = load_data(f"data/samples_N={args.system_size}_batch=1", params['data']['batch size'])
-    GS_psi, DMRG_energy = load_observables(args.system_size)
+    gs_psi, dmrg_energy = load_observables(args.system_size)
 
     # initialize the model
-    rnn = ConventionalRNN(hidden=hidden_units, system_size=args.system_size, seed=random_seed, symmetric=False)
+    rnn = ConventionalRNN(hidden=hidden_units, system_size=args.system_size, seed=random_seed)
 
     # start training
     import time
 
     start = time.time()
     train(rnn, data=data_loader, results_path=save_path, num_epochs=epochs,
-          learning_rate=lr, display_epochs=de, verbose=False)
+          truth_energy=dmrg_energy, learning_rate=lr, display_epochs=de, verbose=False)
 
     print(f"Execution time: {time.time() - start} seconds")

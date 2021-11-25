@@ -3,7 +3,7 @@
     "learning rate": 0.001,
     "random seed": 1,
     "epochs": 200,
-    "display epochs": 10
+    "display epochs": 1
   },
 
   "data": {

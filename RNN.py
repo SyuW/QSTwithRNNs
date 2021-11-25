@@ -106,9 +106,10 @@ class ConventionalRNN(nn.Module):
             # don't require grad
             flipped_prob = torch.prod(flipped_probs.detach(), dim=1)
 
-            factor = 1 + (-1) ** (1 + samples[:, i] + samples[:, i + 1])
+            # probs wrong
+            factor = 1 + (-1) ** (1 - flipped_i[:, i] - flipped_i[:, i + 1])
 
-            E -= factor * torch.sqrt(orig_prob / (flipped_prob + 1e-10))
+            E -= factor * torch.sqrt(orig_prob / (flipped_prob + 1e-15))
 
         return torch.mean(E)
 
@@ -194,15 +195,14 @@ if __name__ == "__main__":
     random_seed = 1
     sys_size = 4
 
-    model = ConventionalRNN(hidden_units, sys_size, random_seed, symmetric=True)
+    model = ConventionalRNN(hidden_units, sys_size, random_seed, symmetric=False)
     test = torch.tensor([[1, 0, 0, 1], [0, 1, 1, 0], [1, 0, 1, 0], [1, 1, 0, 0], [0, 1, 0, 1],
                          [0, 0, 1, 1]])  # DATA SHOULD BE OUR BATCHES IN TRAINING
 
     # probs and same sample
-    s, p = model.get_samples_and_probs(batch=test, get_same_sample=True, verbose=True)
+    s, p = model.get_samples_and_probs(batch=test, get_same_sample=True, verbose=False)
 
     # probs and new sample
     s, p = model.get_samples_and_probs(n_samples=30, get_same_sample=False, verbose=False)
 
     energy = model.calculate_xy_energy(s)
-    pass
