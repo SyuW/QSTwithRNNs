@@ -15,6 +15,7 @@ from data import load_data, load_observables
 import torch
 import torch.optim as optim
 import json
+import pickle 
 
 
 def negative_log_loss(inputs):
@@ -44,6 +45,53 @@ def calculate_nonzero_sz_percent(samples):
 
     return nonzero_sz
 
+def transform_states_to_binary(samples):
+    
+    for i in range(samples.shape[1]):
+        
+        samples[:,samples.shape[1]-i-1]*=2**i
+        samples_in_bin=torch.sum(samples, dim=1, keepdim=True)
+    
+    return samples_in_bin
+
+def Fidelity(samples, probs, GS_psi):
+#    print("############### Fidelity start #################")
+#    print("cond probs", probs)
+    probs=torch.prod(probs, dim=1, keepdim=True)
+
+    #Calculate PSI of the RNN
+
+#    print("samples",samples)
+#    print("probs",probs)
+#    print("GS_psi",GS_psi)
+    
+    samples_in_bin=transform_states_to_binary(samples)
+    samples_and_probs=torch.cat([samples_in_bin,probs], dim=1)
+    unique_samples=torch.unique(samples_in_bin)
+#    print("samples_and_probs",samples_and_probs)
+#    print("unique samples", unique_samples)
+    
+    fidelity=0
+    RNN_psi_sigmas=[]
+
+    for sigma in unique_samples:
+        sigma=int(sigma.numpy())
+#        print(sigma)
+        GS_psi_sigma=GS_psi[sigma]
+
+#        print("GS_psi_sigma",GS_psi_sigma)
+        
+        for sam_and_pr in samples_and_probs:
+            
+            if sigma==sam_and_pr[0]:
+                RNN_psi_sigma=np.sqrt(sam_and_pr[1].numpy())
+#                print("RNN_psi_sigma",RNN_psi_sigma)
+                break
+        RNN_psi_sigmas.append([sigma,RNN_psi_sigma])
+        fidelity+=GS_psi_sigma*RNN_psi_sigma
+#        print("fidelity",fidelity)
+
+    return fidelity**2, RNN_psi_sigmas
 
 def train(model, data, results_path, num_epochs, display_epochs, learning_rate, verbose=True):
     """
@@ -63,6 +111,8 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate, 
 
     obj_vals = []
     nonzero_sz_vals = []
+    infidelity_vals=[]
+    RNN_psi_sigmas_epochs=[]
     # start the training
     for epoch in range(num_epochs):
 
@@ -71,7 +121,7 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate, 
             optimizer.zero_grad()
 
             # calculate probabilities
-            sampled_spins, probs = model.train_or_sample(batch=batch, training=True, verbose=False)
+            sampled_spins, probs = model.get_samples_and_probs(batch=batch, get_same_sample=True, verbose=False)
             config_probabilities = torch.prod(probs, dim=1, keepdim=True)
 
             # compute the loss
@@ -82,17 +132,31 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate, 
             optimizer.step()
 
         # sample from RNN probability distribution at the end of each epoch
+ 
         with torch.no_grad():
-            samples, _ = model.train_or_sample(n_samples=1000, training=False, verbose=False)
+            
+            samples, samples_probs = model.get_samples_and_probs(n_samples=1000, get_same_sample=False, verbose=False)
             nonzero_sz_percent = calculate_nonzero_sz_percent(samples)
+            fidelity, RNN_psi_sigmas =Fidelity(samples, samples_probs, GS_psi)
+            
             nonzero_sz_vals.append(nonzero_sz_percent)
+            infidelity_vals.append(1-fidelity)
+            RNN_psi_sigmas_epochs.append(RNN_psi_sigmas)
 
         # use loss value for last batch of epoch for plot
         obj_vals.append(obj_val.item())
 
         # print out the epoch and loss value every display_epochs
         if (epoch + 1) % display_epochs == 0:
-            print(f"Epoch [{epoch + 1}/{num_epochs}\tLoss: {obj_val:.4f}]")
+            print(f"Epoch [{epoch + 1}/{num_epochs}]\tLoss: {obj_val:.4f}\tinfidelity: {1-fidelity:.4f}")
+
+    #Save PSIS:
+    if model.symmetry==False:
+        with open(save_path+f"/N={model.num_spins}"+f"psi_N={model.num_spins}_RNN.pkl", "wb") as file:   #Pickling
+            pickle.dump(RNN_psi_sigmas_epochs, file)
+    else:
+        with open(save_path+f"/N={model.num_spins}"+f"psi_N={model.num_spins}_U(1).pkl", "wb") as file:   #Pickling
+            pickle.dump(RNN_psi_sigmas_epochs, file)
 
     # create all the plots
     with plt.ioff():
@@ -157,7 +221,7 @@ if __name__ == "__main__":
     GS_psi, DMRG_energy = load_observables(args.system_size)
 
     # initialize the model
-    rnn = ConventionalRNN(hidden=hidden_units, system_size=args.system_size, seed=random_seed, symmetric=False)
+    rnn = ConventionalRNN(hidden=hidden_units, system_size=args.system_size, seed=random_seed, symmetric=True)
 
     # start training
     import time
@@ -167,3 +231,4 @@ if __name__ == "__main__":
           learning_rate=lr, display_epochs=de, verbose=False)
 
     print(f"Execution time: {time.time() - start} seconds")
+
