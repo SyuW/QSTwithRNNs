@@ -6,6 +6,8 @@ Authors: Uzair Lakhani, Luc Andre Ouellet, Jefferson Pule Mendez
 
 import argparse
 
+import numpy as np
+
 import torch
 import torch.nn as nn
 import json
@@ -81,15 +83,35 @@ class ConventionalRNN(nn.Module):
 
         return sample_sigma_n, sigma_n_encoded, conditional_prob
 
-    def calculate_x_y_energy(self):
-        samples = model.train_or_sample(n_samples=30, training=False, verbose=False)
-        E = torch.zeroes(samples.shape[0])
+    def calculate_xy_energy(self, samples):
+
+        # initial energy as tensor of shape (batch_size, 1)
+        E = torch.zeros(samples.shape[0])
+
+        # calculate psi for the initial batch
+        samples = samples.detach()
+        _, orig_probs = self.get_samples_and_probs(batch=samples, get_same_sample=True)
+        orig_prob = torch.prod(orig_probs.detach(), dim=1)
 
         # iterate over spins in state
-        for i in range(self.num_spins-1):
+        for i in range(self.num_spins - 1):
+            # flip the i-th spin and its neighbor
+            flipped_i = samples.clone()
+            flipped_i[:, i] = 1 - flipped_i[:, i]
+            flipped_i[:, i + 1] = 1 - flipped_i[:, i + 1]
 
+            # wavefunction coefficient
+            _, flipped_probs = self.get_samples_and_probs(batch=flipped_i, get_same_sample=True)
 
-            factor = 1 + (-1) ** (1 + samples[i] + samples[i + 1])
+            # don't require grad
+            flipped_prob = torch.prod(flipped_probs.detach(), dim=1)
+
+            # matrix element of hamiltonian
+            factor = 1 + (-1) ** (1 + samples[:, i] + samples[:, i + 1])
+
+            E -= factor * torch.sqrt(flipped_prob / (orig_prob + 1e-15))
+
+        return torch.mean(E)
 
     def get_samples_and_probs(self, batch=[], n_samples=30, get_same_sample=False, verbose=False):
         """
@@ -97,9 +119,9 @@ class ConventionalRNN(nn.Module):
         a sample sigma_i and its conditional probability. The output are two tensors containing
         the sampled spins and the individual conditional probabilities.
 
+        :param get_same_sample:
         :param batch: pytorch tensor. the data set for training. (useful when data is not required).
         :param n_samples: int. number of spin configuration samples to generate.
-        :param training: boolean. whether we are training using data or not. if false then just sample randomly.
         :param verbose: boolean. verbosity level.
 
         :return: sampled_spins, probabilities
@@ -173,13 +195,14 @@ if __name__ == "__main__":
     random_seed = 1
     sys_size = 4
 
-    model = ConventionalRNN(hidden_units, sys_size, random_seed, symmetric=True)
+    model = ConventionalRNN(hidden_units, sys_size, random_seed, symmetric=False)
     test = torch.tensor([[1, 0, 0, 1], [0, 1, 1, 0], [1, 0, 1, 0], [1, 1, 0, 0], [0, 1, 0, 1],
                          [0, 0, 1, 1]])  # DATA SHOULD BE OUR BATCHES IN TRAINING
-    p, s = model.train_or_sample(batch=test, training=True,
-                                 verbose=True)  # INCLUDE DATA WHEN TRAINING TRUE
-    model = ConventionalRNN(hidden_units, sys_size, random_seed, symmetric=False)
-    p, s = model.train_or_sample(batch=test, training=True,
-                                 verbose=True)  # INCLUDE DATA WHEN TRAINING TRUE
-    p, s = model.train_or_sample(n_samples=30, training=False,
-                                 verbose=False)  # DO NOT INCLUDE DATA WHEN TRAINING NOT TRUE
+
+    # probs and same sample
+    s, p = model.get_samples_and_probs(batch=test, get_same_sample=True, verbose=False)
+
+    # probs and new sample
+    s, p = model.get_samples_and_probs(n_samples=30, get_same_sample=False, verbose=False)
+
+    energy = model.calculate_xy_energy(s)

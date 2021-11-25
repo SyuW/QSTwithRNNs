@@ -98,6 +98,8 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate, 
     """
     train the model
 
+    :param truth_energy:
+    :param verbose:
     :param learning_rate:
     :param display_epochs:
     :param num_epochs:
@@ -139,6 +141,9 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate, 
             samples, samples_probs = model.get_samples_and_probs(n_samples=1000, get_same_sample=False, verbose=False)
             nonzero_sz_percent = calculate_nonzero_sz_percent(samples)
             nonzero_sz_vals.append(nonzero_sz_percent)
+            # calculate the energy difference
+            rnn_energy_per_spin = model.calculate_xy_energy(samples) / model.num_spins
+            energy_diff = torch.abs(rnn_energy_per_spin - truth_energy)
 
             # calculate the fidelity
             fidelity, RNN_psi_sigmas = Fidelity(samples, samples_probs, GS_psi)
@@ -220,7 +225,7 @@ if __name__ == "__main__":
 
     # create the data loader
     data_loader = load_data(f"data/samples_N={args.system_size}_batch=1", params['data']['batch size'])
-    GS_psi, DMRG_energy = load_observables(args.system_size)
+    gs_psi, dmrg_energy = load_observables(args.system_size)
 
     # initialize the model
     rnn = ConventionalRNN(hidden=hidden_units, system_size=args.system_size, seed=random_seed, symmetric=True)
@@ -230,6 +235,6 @@ if __name__ == "__main__":
 
     start = time.time()
     train(rnn, data=data_loader, results_path=save_path, num_epochs=epochs,
-          learning_rate=lr, display_epochs=de, verbose=False)
+          truth_energy=dmrg_energy, learning_rate=lr, display_epochs=de, verbose=False)
 
     print(f"Execution time: {time.time() - start} seconds")
