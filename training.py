@@ -71,7 +71,7 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate, 
             optimizer.zero_grad()
 
             # calculate probabilities
-            sampled_spins, probs = model.train_or_sample(batch=batch, training=True, verbose=False)
+            sampled_spins, probs = model.get_samples_and_probs(batch=batch, get_same_sample=True, verbose=False)
             config_probabilities = torch.prod(probs, dim=1, keepdim=True)
 
             # compute the loss
@@ -83,9 +83,11 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate, 
 
         # sample from RNN probability distribution at the end of each epoch
         with torch.no_grad():
-            samples, _ = model.train_or_sample(n_samples=1000, training=False, verbose=False)
+            samples, _ = model.get_samples_and_probs(n_samples=1000, get_same_sample=False, verbose=False)
             nonzero_sz_percent = calculate_nonzero_sz_percent(samples)
             nonzero_sz_vals.append(nonzero_sz_percent)
+
+
 
         # use loss value for last batch of epoch for plot
         obj_vals.append(obj_val.item())
