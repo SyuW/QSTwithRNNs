@@ -81,7 +81,17 @@ class ConventionalRNN(nn.Module):
 
         return sample_sigma_n, sigma_n_encoded, conditional_prob
 
-    def train_or_sample(self, batch=[], n_samples=30, training=False, verbose=False):
+    def calculate_x_y_energy(self):
+        samples = model.train_or_sample(n_samples=30, training=False, verbose=False)
+        E = torch.zeroes(samples.shape[0])
+
+        # iterate over spins in state
+        for i in range(self.num_spins-1):
+
+
+            factor = 1 + (-1) ** (1 + samples[i] + samples[i + 1])
+
+    def get_samples_and_probs(self, batch=[], n_samples=30, get_same_sample=False, verbose=False):
         """
         Function sequentially performs num_spins iterations returning for each iteration
         a sample sigma_i and its conditional probability. The output are two tensors containing
@@ -96,7 +106,7 @@ class ConventionalRNN(nn.Module):
         """
 
         # infer batch size from training dataset
-        if training:
+        if get_same_sample:
             batch_size = batch.shape[0]
         # else, if sampling, use n_samples parameter
         else:
@@ -125,8 +135,8 @@ class ConventionalRNN(nn.Module):
                 if n != 0:
                     prob = self.enforce_symmetry(prob, sampled_spins, self.num_spins)
 
-                    # get the next spin
-            sampled_spin, sigma_n, conditional_prob = self.get_next_spin_and_prob(n, prob, batch, training)
+            # get the next spin
+            sampled_spin, sigma_n, conditional_prob = self.get_next_spin_and_prob(n, prob, batch, get_same_sample)
 
             # if initial recurrent cell, simply add since variables were initialized to zero
             if n == 0:
@@ -140,7 +150,7 @@ class ConventionalRNN(nn.Module):
 
         if verbose:
             print(f"Symmetry: {self.symmetry}")
-            print(f"Training mode: {training}")
+            print(f"Training mode: {get_same_sample}")
             print(f"Probabilities: {probabilities}")
             print(f"Generated sample: {sampled_spins}")
             print(f"Input data: {batch}")
