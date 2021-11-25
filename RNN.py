@@ -106,10 +106,10 @@ class ConventionalRNN(nn.Module):
             # don't require grad
             flipped_prob = torch.prod(flipped_probs.detach(), dim=1)
 
-            # probs wrong
-            factor = 1 + (-1) ** (1 - flipped_i[:, i] - flipped_i[:, i + 1])
+            # matrix element of hamiltonian
+            factor = 1 + (-1) ** (1 + samples[:, i] + samples[:, i + 1])
 
-            E -= factor * torch.sqrt(orig_prob / (flipped_prob + 1e-15))
+            E -= factor * torch.sqrt(flipped_prob / (orig_prob + 1e-15))
 
         return torch.mean(E)
 
