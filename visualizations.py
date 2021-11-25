@@ -19,7 +19,7 @@ def plot_loss_values(num_epochs, vals, N):
     with plt.ioff():
         fig, ax = plt.subplots()
 
-    ax.plot(range(num_epochs), vals, color="red")
+    ax.plot(range(num_epochs), vals, marker=">", color="red")
     ax.set_xlabel("Epoch")
     ax.set_ylabel("Negative Log Loss")
     ax.set_title(f"Loss vs epoch for N={N}")
@@ -39,14 +39,12 @@ def plot_nonzero_sz(num_epochs, vals, N):
     with plt.ioff():
         fig, ax = plt.subplots()
 
-    ax.plot(range(num_epochs), vals, color="red")
+    ax.plot(range(num_epochs), vals, color="blue", merker='<')
     ax.set_xlabel("Epoch")
     ax.set_ylabel(r"Percentage of samples with $S_z \neq 0$")
     ax.set_title(r"Fraction of samples with $S_z \neq 0$ " + f"for N={N}")
 
     return fig
-
-
 
 
 if __name__ == "__main__":

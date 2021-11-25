@@ -139,3 +139,4 @@ __/pycache__/
 *.png
 *.txt
 *.npy
+*.pkl
