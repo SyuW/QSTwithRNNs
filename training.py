@@ -151,10 +151,13 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate,
             energy_diff = torch.abs(rnn_energy_per_spin - truth_energy)
             energy_diff_vals.append(energy_diff)
 
-            # calculate the fidelity
-            fidelity, RNN_psi_sigmas = Fidelity(samples, samples_probs, truth_psi)
-            infidelity_vals.append(1 - fidelity)
-            RNN_psi_sigmas_epochs.append(RNN_psi_sigmas)
+            # calculate the fidelity if
+            if int(model.num_spins) in [2, 4, 10]:
+                fidelity, RNN_psi_sigmas = Fidelity(samples, samples_probs, truth_psi)
+                infidelity_vals.append(1 - fidelity)
+                RNN_psi_sigmas_epochs.append(RNN_psi_sigmas)
+            else:
+                fidelity = 0
 
         # use loss value for last batch of epoch for plot
         obj_vals.append(obj_val.item())
@@ -167,33 +170,41 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate,
                    f"\tEnergy difference: {energy_diff:.4f}"))
 
     # Save PSIs:
-    if not model.symmetry:
-        with open(save_path + f"/N={model.num_spins}" + f"psi_N={model.num_spins}_RNN.pkl", "wb") as file:  # Pickling
-            pickle.dump(RNN_psi_sigmas_epochs, file)
-    else:
-        with open(save_path + f"/N={model.num_spins}" + f"psi_N={model.num_spins}_U(1).pkl", "wb") as file:  # Pickling
-            pickle.dump(RNN_psi_sigmas_epochs, file)
+    if int(model.num_spins) in [2, 4, 10]:
+        if not model.symmetry:
+            with open(save_path + f"/N={model.num_spins}" + f"psi_N={model.num_spins}_RNN.pkl", "wb") as file:  # Pickling
+                pickle.dump(RNN_psi_sigmas_epochs, file)
+        else:
+            with open(save_path + f"/N={model.num_spins}" + f"psi_N={model.num_spins}_U(1).pkl", "wb") as file:  # Pickling
+                pickle.dump(RNN_psi_sigmas_epochs, file)
 
     # save the arrays with loss, non-zero Sz, infidelity, energy differences
     loss_fname = f"loss_N_{model.num_spins}_symm_{model.symmetry}"
     sz_fname = f"sz_N_{model.num_spins}_symm_{model.symmetry}"
-    infidelity_fname = f"infidelity_N_{model.num_spins}_symm_{model.symmetry}.npy"
     energy_diff_fname = f"energy_diff_{model.num_spins}_symm_{model.symmetry}.npy"
     np.save(os.path.join(results_path, loss_fname), np.array(obj_vals))
     np.save(os.path.join(results_path, sz_fname), np.array(nonzero_sz_vals))
-    np.save(os.path.join(results_path, infidelity_fname), np.array(infidelity_vals))
     np.save(os.path.join(results_path, energy_diff_fname), np.array(energy_diff_vals))
+
+    if int(model.num_spins) in [2, 4, 10]:
+        infidelity_fname = f"infidelity_N_{model.num_spins}_symm_{model.symmetry}.npy"
+        np.save(os.path.join(results_path, infidelity_fname), np.array(infidelity_vals))
 
     # write to report file
     with open(os.path.join(results_path, "report.txt"), 'w') as report_file:
-        report_file.write("-" * 50 + "\nBegin Training Report\n" + "-" * 90 + "\n")
+        report_file.write("-" * 90 + "\nBegin Training Report\n" + "-" * 90 + "\n")
         for epoch in range(num_epochs):
-            entry = (f"Epoch [{epoch + 1}/{num_epochs}]"
-                     f"\tLoss: {obj_vals[epoch]:.4f}"
-                     f"\tInfidelity: {infidelity_vals[epoch]:.4f}"
-                     f"\tEnergy difference: {energy_diff_vals[epoch]:.4f}\n")
+            if int(model.num_spins) in [2, 4, 10]:
+                entry = (f"Epoch [{epoch + 1}/{num_epochs}]"
+                         f"\tLoss: {obj_vals[epoch]:.4f}"
+                         f"\tInfidelity: {infidelity_vals[epoch]:.4f}"
+                         f"\tEnergy difference: {energy_diff_vals[epoch]:.4f}\n")
+            else:
+                entry = (f"Epoch [{epoch + 1}/{num_epochs}]"
+                         f"\tLoss: {obj_vals[epoch]:.4f}"
+                         f"\tEnergy difference: {energy_diff_vals[epoch]:.4f}\n")
             report_file.write(entry)
-        report_file.write("-" * 50 + "\nEnd Training Report\n" + "-" * 90 + "\n")
+        report_file.write("-" * 90 + "\nEnd Training Report\n" + "-" * 90 + "\n")
 
 
 if __name__ == "__main__":
@@ -213,7 +224,6 @@ if __name__ == "__main__":
         de = params['training']['display epochs']
         hidden_units = params['model']['hidden units']
         batch_size = params['data']['batch size']
-        n_samples = 10
 
     # make the directory to store results at
     save_path = os.path.join(args.results_path, f"N={args.system_size}")

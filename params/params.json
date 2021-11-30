@@ -2,8 +2,8 @@
   "training": {
     "learning rate": 0.001,
     "random seed": 1,
-    "epochs": 2000,
-    "display epochs": 20
+    "epochs": 5,
+    "display epochs": 1
   },
 
   "data": {
