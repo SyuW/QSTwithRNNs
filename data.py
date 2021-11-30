@@ -14,4 +14,11 @@ def load_observables(N):
     else:
         psi_N = np.random.randn(2, 2)
     energies = np.loadtxt("data/energies", skiprows=1)
-    return psi_N[:, 0], energies[int(N / 2) - 1, 1]
+    
+    energies_dict = dict()
+    for i, n in enumerate(energies[:, 0]):
+        energies_dict[n] = energies[i, 1]
+    print(energies_dict)
+    energy = energies_dict[N]
+
+    return psi_N[:, 0], energy
