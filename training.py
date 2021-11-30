@@ -94,10 +94,12 @@ def Fidelity(samples, probs, GS_psi):
     return fidelity ** 2, RNN_psi_sigmas
 
 
-def train(model, data, results_path, num_epochs, display_epochs, learning_rate, verbose=True):
+def train(model, data, results_path, num_epochs, display_epochs, learning_rate,
+          truth_energy, truth_psi, verbose=True):
     """
     train the model
 
+    :param truth_psi:
     :param truth_energy:
     :param verbose:
     :param learning_rate:
@@ -115,7 +117,9 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate, 
     obj_vals = []
     nonzero_sz_vals = []
     infidelity_vals = []
+    energy_diff_vals = []
     RNN_psi_sigmas_epochs = []
+
     # start the training
     for epoch in range(num_epochs):
 
@@ -141,63 +145,66 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate, 
             samples, samples_probs = model.get_samples_and_probs(n_samples=1000, get_same_sample=False, verbose=False)
             nonzero_sz_percent = calculate_nonzero_sz_percent(samples)
             nonzero_sz_vals.append(nonzero_sz_percent)
+
             # calculate the energy difference
             rnn_energy_per_spin = model.calculate_xy_energy(samples) / model.num_spins
             energy_diff = torch.abs(rnn_energy_per_spin - truth_energy)
+            energy_diff_vals.append(energy_diff)
 
-            # calculate the fidelity
-            fidelity, RNN_psi_sigmas = Fidelity(samples, samples_probs, GS_psi)
-            infidelity_vals.append(1 - fidelity)
-            RNN_psi_sigmas_epochs.append(RNN_psi_sigmas)
+            # calculate the fidelity if
+            if int(model.num_spins) in [2, 4, 10]:
+                fidelity, RNN_psi_sigmas = Fidelity(samples, samples_probs, truth_psi)
+                infidelity_vals.append(1 - fidelity)
+                RNN_psi_sigmas_epochs.append(RNN_psi_sigmas)
+            else:
+                fidelity = 0
 
         # use loss value for last batch of epoch for plot
         obj_vals.append(obj_val.item())
 
         # print out the epoch and loss value every display_epochs
         if (epoch + 1) % display_epochs == 0:
-            print(f"Epoch [{epoch + 1}/{num_epochs}]\tLoss: {obj_val:.4f}\tinfidelity: {1 - fidelity:.4f}")
+            print((f"Epoch [{epoch + 1}/{num_epochs}]"
+                   f"\tLoss: {obj_val:.4f}"
+                   f"\tInfidelity: {1 - fidelity:.4f}"
+                   f"\tEnergy difference: {energy_diff:.4f}"))
 
     # Save PSIs:
-    if not model.symmetry:
-        with open(save_path + f"/N={model.num_spins}" + f"psi_N={model.num_spins}_RNN.pkl", "wb") as file:  # Pickling
-            pickle.dump(RNN_psi_sigmas_epochs, file)
-    else:
-        with open(save_path + f"/N={model.num_spins}" + f"psi_N={model.num_spins}_U(1).pkl", "wb") as file:  # Pickling
-            pickle.dump(RNN_psi_sigmas_epochs, file)
+    if int(model.num_spins) in [2, 4, 10]:
+        if not model.symmetry:
+            with open(save_path + f"/N={model.num_spins}" + f"psi_N={model.num_spins}_RNN.pkl", "wb") as file:  # Pickling
+                pickle.dump(RNN_psi_sigmas_epochs, file)
+        else:
+            with open(save_path + f"/N={model.num_spins}" + f"psi_N={model.num_spins}_U(1).pkl", "wb") as file:  # Pickling
+                pickle.dump(RNN_psi_sigmas_epochs, file)
 
-    # create all the plots
-    with plt.ioff():
-        fig, ax = plt.subplots()
+    # save the arrays with loss, non-zero Sz, infidelity, energy differences
+    loss_fname = f"loss_N_{model.num_spins}_symm_{model.symmetry}"
+    sz_fname = f"sz_N_{model.num_spins}_symm_{model.symmetry}"
+    energy_diff_fname = f"energy_diff_{model.num_spins}_symm_{model.symmetry}.npy"
+    np.save(os.path.join(results_path, loss_fname), np.array(obj_vals))
+    np.save(os.path.join(results_path, sz_fname), np.array(nonzero_sz_vals))
+    np.save(os.path.join(results_path, energy_diff_fname), np.array(energy_diff_vals))
 
-    # loss plot
-    ax.plot(range(num_epochs), obj_vals, color="red")
-    ax.set_xlabel("Epoch")
-    ax.set_ylabel("Negative Log Loss")
-    ax.set_title(f"Loss vs epoch for N={batch.shape[1]}")
-    fig.savefig(os.path.join(results_path, "loss_plot.png"))
-    ax.cla()
-
-    # non-zero S_z samples plot
-    ax.plot(range(num_epochs), nonzero_sz_vals, color="red")
-    ax.set_xlabel("Epoch")
-    ax.set_ylabel(r"Percentage of samples with $S_z \neq 0$")
-    ax.set_title(r"Fraction of samples with $S_z \neq 0$ " + f"for N={batch.shape[1]}")
-    fig.savefig(os.path.join(results_path, "nonzero_sz_plot.png"))
-    ax.cla()
-
-    # close all active figures
-    plt.close()
-
-    # save the arrays with loss values and S_z non-zero
-    np.save(os.path.join(results_path, f"loss_N_{batch.shape[1]}.npy"), np.array(obj_vals))
-    np.save(os.path.join(results_path, f"sz_N_{batch.shape[1]}.npy"), np.array(nonzero_sz_vals))
+    if int(model.num_spins) in [2, 4, 10]:
+        infidelity_fname = f"infidelity_N_{model.num_spins}_symm_{model.symmetry}.npy"
+        np.save(os.path.join(results_path, infidelity_fname), np.array(infidelity_vals))
 
     # write to report file
     with open(os.path.join(results_path, "report.txt"), 'w') as report_file:
-        report_file.write("-" * 50 + "\nBegin Training Report\n" + "-" * 50 + "\n")
+        report_file.write("-" * 90 + "\nBegin Training Report\n" + "-" * 90 + "\n")
         for epoch in range(num_epochs):
-            report_file.write(f'Epoch [{epoch + 1}/{num_epochs}]\tLoss: {obj_vals[epoch]:.4f}\n')
-        report_file.write("-" * 50 + "\nEnd Training Report\n" + "-" * 50 + "\n")
+            if int(model.num_spins) in [2, 4, 10]:
+                entry = (f"Epoch [{epoch + 1}/{num_epochs}]"
+                         f"\tLoss: {obj_vals[epoch]:.4f}"
+                         f"\tInfidelity: {infidelity_vals[epoch]:.4f}"
+                         f"\tEnergy difference: {energy_diff_vals[epoch]:.4f}\n")
+            else:
+                entry = (f"Epoch [{epoch + 1}/{num_epochs}]"
+                         f"\tLoss: {obj_vals[epoch]:.4f}"
+                         f"\tEnergy difference: {energy_diff_vals[epoch]:.4f}\n")
+            report_file.write(entry)
+        report_file.write("-" * 90 + "\nEnd Training Report\n" + "-" * 90 + "\n")
 
 
 if __name__ == "__main__":
@@ -211,13 +218,12 @@ if __name__ == "__main__":
     with open(args.json, 'r') as f:
         params = json.load(f)
 
-        lr = params['optim']['learning rate']
-        random_seed = params['optim']['random seed']  # Where do we define the random seed
-        epochs = params['optim']['epochs']
-        de = params['optim']['display epochs']
+        lr = params['training']['learning rate']
+        random_seed = params['training']['random seed']  # Where do we define the random seed
+        epochs = params['training']['epochs']
+        de = params['training']['display epochs']
         hidden_units = params['model']['hidden units']
         batch_size = params['data']['batch size']
-        n_samples = 10
 
     # make the directory to store results at
     save_path = os.path.join(args.results_path, f"N={args.system_size}")
@@ -234,7 +240,7 @@ if __name__ == "__main__":
     import time
 
     start = time.time()
-    train(rnn, data=data_loader, results_path=save_path, num_epochs=epochs,
-          truth_energy=dmrg_energy, learning_rate=lr, display_epochs=de, verbose=False)
+    train(rnn, data=data_loader, results_path=save_path, num_epochs=epochs, truth_energy=dmrg_energy,
+          truth_psi=gs_psi, learning_rate=lr, display_epochs=de, verbose=False)
 
     print(f"Execution time: {time.time() - start} seconds")

@@ -84,7 +84,11 @@ class ConventionalRNN(nn.Module):
         return sample_sigma_n, sigma_n_encoded, conditional_prob
 
     def calculate_xy_energy(self, samples):
+        """
 
+        :param samples:
+        :return:
+        """
         # initial energy as tensor of shape (batch_size, 1)
         E = torch.zeros(samples.shape[0])
 

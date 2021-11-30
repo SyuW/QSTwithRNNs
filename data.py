@@ -9,6 +9,9 @@ def load_data(path, batchsize):
 
 
 def load_observables(N):
-    psi_N = np.loadtxt("data/psi_N=" + str(N))
+    if N in [2, 4, 10]:
+        psi_N = np.loadtxt("data/psi_N=" + str(N))
+    else:
+        psi_N = np.random.randn(2, 2)
     energies = np.loadtxt("data/energies", skiprows=1)
     return psi_N[:, 0], energies[int(N / 2) - 1, 1]
