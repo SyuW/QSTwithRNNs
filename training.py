@@ -9,7 +9,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-from RNN import ConventionalRNN
+from RNN import RNN
 from data import load_data, load_observables
 
 import torch
@@ -234,7 +234,7 @@ if __name__ == "__main__":
     gs_psi, dmrg_energy = load_observables(args.system_size)
 
     # initialize the model
-    rnn = ConventionalRNN(hidden=hidden_units, system_size=args.system_size, seed=random_seed, symmetric=True)
+    rnn = RNN(hidden=hidden_units, system_size=args.system_size, seed=random_seed, symmetric=True)
 
     # start training
     import time

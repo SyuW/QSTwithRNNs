@@ -13,10 +13,10 @@ import torch.nn as nn
 import json
 
 
-class ConventionalRNN(nn.Module):
+class RNN(nn.Module):
 
     def __init__(self, hidden, system_size, seed, symmetric=False):
-        super(ConventionalRNN, self).__init__()
+        super(RNN, self).__init__()
 
         # parameters
         self.hidden_units = hidden
@@ -199,7 +199,7 @@ if __name__ == "__main__":
     random_seed = 1
     sys_size = 4
 
-    model = ConventionalRNN(hidden_units, sys_size, random_seed, symmetric=False)
+    model = RNN(hidden_units, sys_size, random_seed, symmetric=False)
     test = torch.tensor([[1, 0, 0, 1], [0, 1, 1, 0], [1, 0, 1, 0], [1, 1, 0, 0], [0, 1, 0, 1],
                          [0, 0, 1, 1]])  # DATA SHOULD BE OUR BATCHES IN TRAINING
 
