@@ -8,11 +8,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import seaborn as sns
+
 sns.set_theme()
 
 
 def create_energy_plot(num_spins, in_path, fig_no):
+    """
+    Plot the energy differences during training
 
+    :param num_spins:
+    :param in_path:
+    :param fig_no:
+    :return:
+    """
     path = os.path.join(in_path, f"N={num_spins}")
 
     # load the energy values from array
@@ -66,6 +74,7 @@ def plot_loss_values(num_spins, in_path):
     epochs = np.arange(len(loss_symm_true)) + 1
     ax.plot(epochs, loss_symm_true, marker=">", color="red", markevery=100, label="U(1)-RNN")
     ax.plot(epochs, loss_symm_false, marker="<", color="blue", markevery=100, label="RNN")
+    ax.legend()
     ax.set_xlabel("Epoch")
     ax.set_ylabel("Negative Log Loss")
     ax.set_title(f"Loss vs epoch for N={N}")
@@ -96,8 +105,8 @@ def plot_nonzero_sz(num_spins, in_path):
 
     return fig
 
-def plot_infidelity(num_spins, in_path):
 
+def plot_infidelity(num_spins, in_path):
     """
     Plot the infidelity during training
 
@@ -114,10 +123,9 @@ def plot_infidelity(num_spins, in_path):
     symm = ['True', 'False']
     color = ['r', 'b']
     for i in range(len(symm)):
+        data = np.load(os.path.join(path, f'infidelity_N_{num_spins}_symm_{symm[i]}.npy'))
+        ax.plot(np.arange(2000)[::30], data[::30], marker="v", markevery=1, color=color[i])
 
-        data = np.load(os.path.join(path,f'infidelity_N_{num_spins}_symm_{symm[i]}.npy'))
-        ax.plot(np.arange(2000)[::30], data[::30], marker = "v", markevery=1, color=color[i])
-    
     ax.legend(['U(1)-RNN', 'RNN'])
     ax.set_xlabel("Epochs")
     ax.set_ylabel("1-F")
@@ -135,6 +143,11 @@ if __name__ == "__main__":
         energy_fig = create_energy_plot(num_spins=N, in_path=results_path, fig_no=4)
         energy_fig.savefig(os.path.join("figures", f"energy_diff_N_{N}.png"))
 
+    # figure 4 from paper - infidelity plots
+    for N in [4, 10]:
+        infidelity = plot_infidelity(num_spins=N, in_path=results_path)
+        infidelity.savefig(os.path.join("figures", f"infidelity_N_{N}.png"))
+
     # figure 5 from paper - energy differences
     for N in [20, 30]:
         energy_fig = create_energy_plot(num_spins=N, in_path=results_path, fig_no=5)
@@ -149,8 +162,4 @@ if __name__ == "__main__":
     for N in [4, 10]:
         sz_nonzero_fig = plot_nonzero_sz(num_spins=N, in_path=results_path)
         sz_nonzero_fig.savefig(os.path.join("figures", f"sz_N_{N}.png"))
-
-    for N in [4, 10]:
-        infidelity = plot_infidelity(num_spins=N, in_path=results_path)
-        infidelity.savefig(os.path.join("figures", f"infidelity_N_{N}.png"))
 
