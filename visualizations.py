@@ -10,6 +10,13 @@ import os
 
 
 def create_energy_plot(num_spins, in_path, fig_no):
+    """
+
+    :param num_spins:
+    :param in_path:
+    :param fig_no:
+    :return:
+    """
 
     path = os.path.join(in_path, f"N={num_spins}")
 
@@ -64,6 +71,7 @@ def plot_loss_values(num_spins, in_path):
     epochs = np.arange(len(loss_symm_true)) + 1
     ax.plot(epochs, loss_symm_true, marker=">", color="red", markevery=100, label="U(1)-RNN")
     ax.plot(epochs, loss_symm_false, marker="<", color="blue", markevery=100, label="RNN")
+    ax.legend()
     ax.set_xlabel("Epoch")
     ax.set_ylabel("Negative Log Loss")
     ax.set_title(f"Loss vs epoch for N={N}")
@@ -90,6 +98,7 @@ def plot_nonzero_sz(num_spins, in_path):
     ax.plot(epochs[::20], sz_symm_false[::20], color="blue", marker='<', markevery=5)
     ax.set_xlabel("Epoch")
     ax.set_ylabel(r"Percentage of samples with $S_z \neq 0$")
+    ax.legend()
     ax.set_title(r"Fraction of samples with $S_z \neq 0$ " + f"for N={N}")
 
     return fig
