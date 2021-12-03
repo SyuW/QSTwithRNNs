@@ -1,7 +1,7 @@
 """
 Functions for visualizing the results
 
-Authors: Kishor Srikantharuban, Sam Yu
+Authors: Uzair Lakhani, Sam Yu
 """
 
 import matplotlib.pyplot as plt

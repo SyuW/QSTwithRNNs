@@ -1,5 +1,6 @@
 """
 Training procedure
+
 Authors: Sam Yu, Jefferson Pule Mendez, Luc Andre Ouellet
 """
 
@@ -7,15 +8,15 @@ import argparse
 import os
 
 import numpy as np
-import matplotlib.pyplot as plt
-
-from RNN import RNN
-from data import load_data, load_observables
 
 import torch
 import torch.optim as optim
 import json
 import pickle
+
+# custom imports
+from RNN import RNN
+from utilities import load_data, load_observables, calculate_nonzero_sz_percent, compute_fidelity
 
 
 def negative_log_loss(inputs):
@@ -32,70 +33,8 @@ def negative_log_loss(inputs):
     return loss_val
 
 
-def calculate_nonzero_sz_percent(samples):
-    """
-    Compute the percentage of samples with non-zero net magnetization
-    :param samples:
-    :return:
-    """
-    # convert back to eigenvalues for S_z
-    num_sz_not_zero = torch.nonzero(torch.sum(samples - 1 / 2, dim=1)).shape[0]
-    total = samples.shape[0]
-    nonzero_sz = num_sz_not_zero / total
-
-    return nonzero_sz
-
-
-def transform_states_to_binary(samples):
-    for i in range(samples.shape[1]):
-        samples[:, samples.shape[1] - i - 1] *= 2 ** i
-        samples_in_bin = torch.sum(samples, dim=1, keepdim=True)
-
-    return samples_in_bin
-
-
-def Fidelity(samples, probs, GS_psi):
-    #    print("############### Fidelity start #################")
-    #    print("cond probs", probs)
-    probs = torch.prod(probs, dim=1, keepdim=True)
-
-    # Calculate PSI of the RNN
-
-    #    print("samples",samples)
-    #    print("probs",probs)
-    #    print("GS_psi",GS_psi)
-
-    samples_in_bin = transform_states_to_binary(samples)
-    samples_and_probs = torch.cat([samples_in_bin, probs], dim=1)
-    unique_samples = torch.unique(samples_in_bin)
-    #    print("samples_and_probs",samples_and_probs)
-    #    print("unique samples", unique_samples)
-
-    fidelity = 0
-    RNN_psi_sigmas = []
-
-    for sigma in unique_samples:
-        sigma = int(sigma.numpy())
-        #        print(sigma)
-        GS_psi_sigma = GS_psi[sigma]
-
-        #        print("GS_psi_sigma",GS_psi_sigma)
-
-        for sam_and_pr in samples_and_probs:
-
-            if sigma == sam_and_pr[0]:
-                RNN_psi_sigma = np.sqrt(sam_and_pr[1].numpy())
-                #                print("RNN_psi_sigma",RNN_psi_sigma)
-                break
-        RNN_psi_sigmas.append([sigma, RNN_psi_sigma])
-        fidelity += GS_psi_sigma * RNN_psi_sigma
-    #        print("fidelity",fidelity)
-
-    return fidelity ** 2, RNN_psi_sigmas
-
-
 def train(model, data, results_path, num_epochs, display_epochs, learning_rate,
-          truth_energy, truth_psi, verbose=True):
+          truth_energy, truth_psi):
     """
     train the model
 
@@ -153,7 +92,7 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate,
 
             # calculate the fidelity if
             if int(model.num_spins) in [2, 4, 10]:
-                fidelity, RNN_psi_sigmas = Fidelity(samples, samples_probs, truth_psi)
+                fidelity, RNN_psi_sigmas = compute_fidelity(samples, samples_probs, truth_psi)
                 infidelity_vals.append(1 - fidelity)
                 RNN_psi_sigmas_epochs.append(RNN_psi_sigmas)
             else:
@@ -241,6 +180,6 @@ if __name__ == "__main__":
 
     start = time.time()
     train(rnn, data=data_loader, results_path=save_path, num_epochs=epochs, truth_energy=dmrg_energy,
-          truth_psi=gs_psi, learning_rate=lr, display_epochs=de, verbose=False)
+          truth_psi=gs_psi, learning_rate=lr, display_epochs=de)
 
     print(f"Execution time: {time.time() - start} seconds")
