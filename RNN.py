@@ -4,13 +4,8 @@ Recurrent neural network
 Authors: Uzair Lakhani, Luc Andre Ouellet, Jefferson Pule Mendez
 """
 
-import argparse
-
-import numpy as np
-
 import torch
 import torch.nn as nn
-import json
 
 
 class RNN(nn.Module):

@@ -101,7 +101,6 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate,
 
     :param truth_psi:
     :param truth_energy:
-    :param verbose:
     :param learning_rate:
     :param display_epochs:
     :param num_epochs:
@@ -172,10 +171,10 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate,
     # Save PSIs:
     if int(model.num_spins) in [2, 4, 10]:
         if not model.symmetry:
-            with open(save_path + f"/N={model.num_spins}" + f"psi_N={model.num_spins}_RNN.pkl", "wb") as file:  # Pickling
+            with open(os.path.join(results_path, f"psi_N={model.num_spins}_RNN.pkl"), "wb") as file:  # Pickling
                 pickle.dump(RNN_psi_sigmas_epochs, file)
         else:
-            with open(save_path + f"/N={model.num_spins}" + f"psi_N={model.num_spins}_U(1).pkl", "wb") as file:  # Pickling
+            with open(os.path.join(results_path, f"psi_N={model.num_spins}_U(1).pkl"), "wb") as file:  # Pickling
                 pickle.dump(RNN_psi_sigmas_epochs, file)
 
     # save the arrays with loss, non-zero Sz, infidelity, energy differences
