@@ -7,6 +7,8 @@ Authors: Kishor Srikantharuban, Sam Yu
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import seaborn as sns
+sns.set_theme()
 
 
 def create_energy_plot(num_spins, in_path, fig_no):
@@ -94,6 +96,35 @@ def plot_nonzero_sz(num_spins, in_path):
 
     return fig
 
+def plot_infidelity(num_spins, in_path):
+
+    """
+    Plot the infidelity during training
+
+    :param num_spins:
+    :param in_path:
+    :return:
+    """
+
+    with plt.ioff():
+        fig, ax = plt.subplots()
+
+    path = os.path.join(in_path, f"N={num_spins}")
+
+    symm = ['True', 'False']
+    color = ['r', 'b']
+    for i in range(len(symm)):
+
+        data = np.load(os.path.join(path,f'infidelity_N_{num_spins}_symm_{symm[i]}.npy'))
+        ax.plot(np.arange(2000)[::30], data[::30], marker = "v", markevery=1, color=color[i])
+    
+    ax.legend(['U(1)-RNN', 'RNN'])
+    ax.set_xlabel("Epochs")
+    ax.set_ylabel("1-F")
+    ax.set_title(f"N={num_spins}")
+    ax.set_yscale('log')
+    return fig
+
 
 if __name__ == "__main__":
 
@@ -118,4 +149,8 @@ if __name__ == "__main__":
     for N in [4, 10]:
         sz_nonzero_fig = plot_nonzero_sz(num_spins=N, in_path=results_path)
         sz_nonzero_fig.savefig(os.path.join("figures", f"sz_N_{N}.png"))
+
+    for N in [4, 10]:
+        infidelity = plot_infidelity(num_spins=N, in_path=results_path)
+        infidelity.savefig(os.path.join("figures", f"infidelity_N_{N}.png"))
 
