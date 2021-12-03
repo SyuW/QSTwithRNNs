@@ -45,19 +45,25 @@ def create_energy_plot(num_spins, in_path, fig_no):
     return fig
 
 
-def plot_loss_values(num_epochs, vals, N):
+def plot_loss_values(num_spins, in_path):
     """
     Plot the loss values from training
 
-    :param num_epochs:
-    :param vals:
-    :param N:
+    :param num_spins:
+    :param in_path:
     :return:
     """
     with plt.ioff():
         fig, ax = plt.subplots()
 
-    ax.plot(np.arange(num_epochs), vals, marker=">", color="red")
+    path = os.path.join(in_path, f"N={num_spins}")
+    loss_symm_true = np.load(os.path.join(path, f"loss_N_{num_spins}_symm_True.npy"))
+    loss_symm_false = np.load(os.path.join(path, f"loss_N_{num_spins}_symm_False.npy"))
+
+    # plot everything
+    epochs = np.arange(len(loss_symm_true)) + 1
+    ax.plot(epochs, loss_symm_true, marker=">", color="red", markevery=100, label="U(1)-RNN")
+    ax.plot(epochs, loss_symm_false, marker="<", color="blue", markevery=100, label="RNN")
     ax.set_xlabel("Epoch")
     ax.set_ylabel("Negative Log Loss")
     ax.set_title(f"Loss vs epoch for N={N}")
@@ -65,19 +71,23 @@ def plot_loss_values(num_epochs, vals, N):
     return fig
 
 
-def plot_nonzero_sz(num_epochs, vals, N):
+def plot_nonzero_sz(num_spins, in_path):
     """
     Plot the percentage of samples with non-zero magnetization
 
-    :param num_epochs:
-    :param vals:
-    :param N:
+    :param num_spins:
+    :param in_path:
     :return:
     """
+
     with plt.ioff():
         fig, ax = plt.subplots()
 
-    ax.plot(np.arange(num_epochs), vals, color="blue", merker='<')
+    path = os.path.join(in_path, f"N={num_spins}")
+    sz_symm_false = np.load(os.path.join(path, f"sz_N_{num_spins}_symm_False.npy"))
+
+    epochs = np.arange(len(sz_symm_false)) + 1
+    ax.plot(epochs[::20], sz_symm_false[::20], color="blue", marker='<')
     ax.set_xlabel("Epoch")
     ax.set_ylabel(r"Percentage of samples with $S_z \neq 0$")
     ax.set_title(r"Fraction of samples with $S_z \neq 0$ " + f"for N={N}")
@@ -89,13 +99,23 @@ if __name__ == "__main__":
 
     results_path = "final_results/"
 
-    # figure 4 from paper
+    # figure 4 from paper - energy differences
     for N in [4, 10]:
         energy_fig = create_energy_plot(num_spins=N, in_path=results_path, fig_no=4)
         energy_fig.savefig(os.path.join("figures", f"energy_diff_N_{N}.png"))
 
-    # figure 5 from paper
+    # figure 5 from paper - energy differences
     for N in [20, 30]:
         energy_fig = create_energy_plot(num_spins=N, in_path=results_path, fig_no=5)
         energy_fig.savefig(os.path.join("figures", f"energy_diff_N_{N}.png"))
+
+    # create loss plots
+    for N in [4, 10]:
+        loss_fig = plot_loss_values(num_spins=N, in_path=results_path)
+        loss_fig.savefig(os.path.join("figures", f"loss_N_{N}.png"))
+
+    # sz non-zero plots
+    for N in [4, 10]:
+        sz_nonzero_fig = plot_nonzero_sz(num_spins=N, in_path=results_path)
+        sz_nonzero_fig.savefig(os.path.join("figures", f"sz_N_{N}.png"))
 
