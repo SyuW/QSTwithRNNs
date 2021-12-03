@@ -87,7 +87,7 @@ def plot_nonzero_sz(num_spins, in_path):
     sz_symm_false = np.load(os.path.join(path, f"sz_N_{num_spins}_symm_False.npy"))
 
     epochs = np.arange(len(sz_symm_false)) + 1
-    ax.plot(epochs[::20], sz_symm_false[::20], color="blue", marker='<')
+    ax.plot(epochs[::20], sz_symm_false[::20], color="blue", marker='<', markevery=5)
     ax.set_xlabel("Epoch")
     ax.set_ylabel(r"Percentage of samples with $S_z \neq 0$")
     ax.set_title(r"Fraction of samples with $S_z \neq 0$ " + f"for N={N}")
@@ -109,12 +109,12 @@ if __name__ == "__main__":
         energy_fig = create_energy_plot(num_spins=N, in_path=results_path, fig_no=5)
         energy_fig.savefig(os.path.join("figures", f"energy_diff_N_{N}.png"))
 
-    # create loss plots
+    # figure 6 from paper - loss plots
     for N in [4, 10]:
         loss_fig = plot_loss_values(num_spins=N, in_path=results_path)
         loss_fig.savefig(os.path.join("figures", f"loss_N_{N}.png"))
 
-    # sz non-zero plots
+    # figure 6 from paper - sz non-zero plots
     for N in [4, 10]:
         sz_nonzero_fig = plot_nonzero_sz(num_spins=N, in_path=results_path)
         sz_nonzero_fig.savefig(os.path.join("figures", f"sz_N_{N}.png"))
