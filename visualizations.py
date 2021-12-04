@@ -171,7 +171,7 @@ def plot_infidelity(num_spins, in_path):
     ax.legend(['U(1)-RNN', 'RNN'])
     ax.set_xlabel("Epochs")
     ax.set_ylabel("1-F")
-    ax.set_title(f"N={num_spins}")
+    ax.set_title(f"Infidelity for N={num_spins}")
     ax.set_yscale('log')
     return fig
 
@@ -203,6 +203,8 @@ if __name__ == "__main__":
 
     results_path = "final_results/"
     os.makedirs(results_path, exist_ok=True)
+    os.makedirs("figures", exist_ok=True)
+
 
     # figure 4 from paper - energy differences
     for N in [4, 10]:
