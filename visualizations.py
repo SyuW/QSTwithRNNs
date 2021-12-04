@@ -125,6 +125,28 @@ def plot_infidelity(num_spins, in_path):
     ax.set_yscale('log')
     return fig
 
+def plot_infidelity_U1_RNN(num_spins, in_path):
+
+    """
+    Plot the infidelity between U1 RNN and RNN during training
+
+    :param num_spins:
+    :param in_path:
+    :return:
+    """
+
+    with plt.ioff():
+        fig, ax = plt.subplots()
+
+    path = os.path.join(in_path, f"N={num_spins}")
+    data = np.load(os.path.join(path,f'infidelity_N_{num_spins}_U_1_RNN.npy'))
+    ax.plot(np.arange(2000)[::30], data[::30], marker = "v")
+    
+    ax.set_xlabel("Epochs")
+    ax.set_ylabel("1-F")
+    ax.set_title(f"Plot of infidelity between U1 RNN and RNN during training for N={num_spins}")
+    ax.set_yscale('log')
+    return fig
 
 if __name__ == "__main__":
 
@@ -150,7 +172,13 @@ if __name__ == "__main__":
         sz_nonzero_fig = plot_nonzero_sz(num_spins=N, in_path=results_path)
         sz_nonzero_fig.savefig(os.path.join("figures", f"sz_N_{N}.png"))
 
+    # figure 4 from paper - infidelity plots
     for N in [4, 10]:
         infidelity = plot_infidelity(num_spins=N, in_path=results_path)
         infidelity.savefig(os.path.join("figures", f"infidelity_N_{N}.png"))
+        
+    # infidelity plots between RNN and U1 RNN - requested during midterm presentation
+    for N in [4, 10]:
+        infidelity_U1_RNN = plot_infidelity_U1_RNN(num_spins=N, in_path=results_path)
+        infidelity_U1_RNN.savefig(os.path.join("figures", f"infidelity_U_1_RNN_N_{N}.png"))
 
