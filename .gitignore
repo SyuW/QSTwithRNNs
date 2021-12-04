@@ -137,6 +137,6 @@ __/pycache__/
 
 # Outputs
 *.png
-#*.txt
-#*.npy
-#*.pkl
+*.txt
+*.npy
+*.pkl

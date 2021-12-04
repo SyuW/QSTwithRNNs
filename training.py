@@ -4,19 +4,14 @@ Training procedure
 Authors: Sam Yu, Jefferson Pule Mendez, Luc Andre Ouellet
 """
 
-import argparse
 import os
-
-import numpy as np
+import pickle
 
 import torch
 import torch.optim as optim
-import json
-import pickle
+import numpy as np
 
-# custom imports
-from RNN import RNN
-from utilities import load_data, load_observables, calculate_nonzero_sz_percent, compute_fidelity
+from utilities import calculate_nonzero_sz_percent, compute_fidelity
 
 
 def negative_log_loss(inputs):
@@ -40,7 +35,6 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate,
 
     :param truth_psi:
     :param truth_energy:
-    :param verbose:
     :param learning_rate:
     :param display_epochs:
     :param num_epochs:
@@ -108,13 +102,13 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate,
                    f"\tInfidelity: {1 - fidelity:.4f}"
                    f"\tEnergy difference: {energy_diff:.4f}"))
 
-    # Save PSIs:
+    # Save psi's:
     if int(model.num_spins) in [2, 4, 10]:
         if not model.symmetry:
-            with open(save_path + f"/N={model.num_spins}" + f"psi_N={model.num_spins}_RNN.pkl", "wb") as file:  # Pickling
+            with open(os.path.join(results_path, f"psi_N={model.num_spins}_RNN.pkl"), "wb") as file:  # Pickling
                 pickle.dump(RNN_psi_sigmas_epochs, file)
         else:
-            with open(save_path + f"/N={model.num_spins}" + f"psi_N={model.num_spins}_U(1).pkl", "wb") as file:  # Pickling
+            with open(os.path.join(results_path, f"psi_N={model.num_spins}_U(1).pkl"), "wb") as file:  # Pickling
                 pickle.dump(RNN_psi_sigmas_epochs, file)
 
     # save the arrays with loss, non-zero Sz, infidelity, energy differences
@@ -125,6 +119,7 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate,
     np.save(os.path.join(results_path, sz_fname), np.array(nonzero_sz_vals))
     np.save(os.path.join(results_path, energy_diff_fname), np.array(energy_diff_vals))
 
+    # save the infidelity values only for the following system sizes
     if int(model.num_spins) in [2, 4, 10]:
         infidelity_fname = f"infidelity_N_{model.num_spins}_symm_{model.symmetry}.npy"
         np.save(os.path.join(results_path, infidelity_fname), np.array(infidelity_vals))
@@ -144,42 +139,3 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate,
                          f"\tEnergy difference: {energy_diff_vals[epoch]:.4f}\n")
             report_file.write(entry)
         report_file.write("-" * 90 + "\nEnd Training Report\n" + "-" * 90 + "\n")
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train RNN for Quantum State Tomography")
-    parser.add_argument("-json", default="params/params.json", help="input path to json file")
-    parser.add_argument("-system_size", type=int, default=4, help="Size of our system. Default 10")
-    parser.add_argument("-results_path", default="results", help="file path to results")
-    args = parser.parse_args()
-
-    # Load the model parameters
-    with open(args.json, 'r') as f:
-        params = json.load(f)
-
-        lr = params['training']['learning rate']
-        random_seed = params['training']['random seed']  # Where do we define the random seed
-        epochs = params['training']['epochs']
-        de = params['training']['display epochs']
-        hidden_units = params['model']['hidden units']
-        batch_size = params['data']['batch size']
-
-    # make the directory to store results at
-    save_path = os.path.join(args.results_path, f"N={args.system_size}")
-    os.makedirs(save_path, exist_ok=True)
-
-    # create the data loader
-    data_loader = load_data(f"data/samples_N={args.system_size}_batch=1", params['data']['batch size'])
-    gs_psi, dmrg_energy = load_observables(args.system_size)
-
-    # initialize the model
-    rnn = RNN(hidden=hidden_units, system_size=args.system_size, seed=random_seed, symmetric=True)
-
-    # start training
-    import time
-
-    start = time.time()
-    train(rnn, data=data_loader, results_path=save_path, num_epochs=epochs, truth_energy=dmrg_energy,
-          truth_psi=gs_psi, learning_rate=lr, display_epochs=de)
-
-    print(f"Execution time: {time.time() - start} seconds")

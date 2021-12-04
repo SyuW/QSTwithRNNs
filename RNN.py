@@ -1,9 +1,8 @@
 """
 Recurrent neural network
 
-Authors: Uzair Lakhani, Luc Andre Ouellet, Jefferson Pule Mendez
+Authors: Uzair Lakhani, Luc Andre Ouellet, Jefferson Pule Mendez, Sam Yu
 """
-
 
 import torch
 import torch.nn as nn
@@ -20,6 +19,7 @@ class RNN(nn.Module):
         :param seed:
         :param symmetric:
         """
+
         super(RNN, self).__init__()
 
         # parameters
@@ -89,8 +89,9 @@ class RNN(nn.Module):
 
     def calculate_xy_energy(self, samples):
         """
+        calculate the expected energy given the XY hamiltonian
 
-        :param samples:
+        :param samples: sampled spin configurations
         :return:
         """
         # initial energy as tensor of shape (batch_size, 1)
@@ -189,12 +190,20 @@ class RNN(nn.Module):
 
     @staticmethod
     def enforce_symmetry(prob, sampled_spins, num_spins):
+        """
+
+        :param prob:
+        :param sampled_spins:
+        :param num_spins:
+        :return:
+        """
 
         N_sampled_spins = sampled_spins.size()[1]
         N_pos = torch.sum(sampled_spins, dim=1, keepdim=True)
         N_neg = N_sampled_spins - N_pos
         N_half = num_spins / 2
         heaviside = torch.where(torch.cat([N_neg, N_pos], dim=1) >= N_half, 0, 1)
+
         return (prob * heaviside) / (torch.sum(prob * heaviside, dim=1, keepdim=True))
 
 
@@ -205,13 +214,13 @@ if __name__ == "__main__":
 
     model = RNN(hidden_units, sys_size, random_seed, symmetric=False)
     test = torch.tensor([[1, 0, 0, 1], [0, 1, 1, 0], [1, 0, 1, 0], [1, 1, 0, 0], [0, 1, 0, 1],
-                         [0, 0, 1, 1]])  # DATA SHOULD BE OUR BATCHES IN TRAINING
+                         [0, 0, 1, 1]])
 
     # probs and same sample
-    s, p = model.get_samples_and_probs(batch=test, get_same_sample=True, verbose=False)
+    s, p = model.get_samples_and_probs(batch=test, get_same_sample=True)
 
     # probs and new sample
-    s, p = model.get_samples_and_probs(n_samples=30, get_same_sample=False, verbose=False)
+    s, p = model.get_samples_and_probs(n_samples=30, get_same_sample=False)
 
     # estimate the XY ground state energy from generated samples
     energy = model.calculate_xy_energy(s)
