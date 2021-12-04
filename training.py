@@ -3,19 +3,15 @@ Training procedure
 Authors: Sam Yu, Jefferson Pule Mendez, Luc Andre Ouellet
 """
 
-import argparse
 import os
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-from RNN import RNN
-from utilities import load_data, load_observables, calculate_nonzero_sz_percent, compute_fidelity
+import pickle
 
 import torch
 import torch.optim as optim
-import json
-import pickle
+import numpy as np
+
+# custom imports
+from utilities import calculate_nonzero_sz_percent, compute_fidelity
 
 
 def negative_log_loss(inputs):
@@ -90,7 +86,7 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate,
 
             # calculate the fidelity if
             if int(model.num_spins) in [2, 4, 10]:
-                fidelity, RNN_psi_sigmas = Fidelity(samples, samples_probs, truth_psi)
+                fidelity, RNN_psi_sigmas = compute_fidelity(samples, samples_probs, truth_psi)
                 infidelity_vals.append(1 - fidelity)
                 RNN_psi_sigmas_epochs.append(RNN_psi_sigmas)
             else:
@@ -106,7 +102,7 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate,
                    f"\tInfidelity: {1 - fidelity:.4f}"
                    f"\tEnergy difference: {energy_diff:.4f}"))
 
-    # Save PSIs:
+    # Save psi's:
     if int(model.num_spins) in [2, 4, 10]:
         if not model.symmetry:
             with open(os.path.join(results_path, f"psi_N={model.num_spins}_RNN.pkl"), "wb") as file:  # Pickling
@@ -123,6 +119,7 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate,
     np.save(os.path.join(results_path, sz_fname), np.array(nonzero_sz_vals))
     np.save(os.path.join(results_path, energy_diff_fname), np.array(energy_diff_vals))
 
+    # save the infidelity values only for the following system sizes
     if int(model.num_spins) in [2, 4, 10]:
         infidelity_fname = f"infidelity_N_{model.num_spins}_symm_{model.symmetry}.npy"
         np.save(os.path.join(results_path, infidelity_fname), np.array(infidelity_vals))

@@ -1,3 +1,9 @@
+"""
+Main entry point
+
+Authors: Sam Yu
+"""
+
 import argparse
 import os
 import json
@@ -6,12 +12,16 @@ import json
 from RNN import RNN
 from training import train
 from utilities import load_data, load_observables
+from visualizations import plot_energy_diffs, plot_loss_values, plot_nonzero_sz
 
 if __name__ == "__main__":
+
+    # command-line argument parsing
     parser = argparse.ArgumentParser(description="Train RNN for Quantum State Tomography")
     parser.add_argument("-json", default="params/params.json", help="input path to json file")
     parser.add_argument("-system_size", type=int, default=4, help="Size of our system. Default 10")
     parser.add_argument("-results_path", default="results", help="file path to results")
+    parser.add_argument("-symmetric", type=bool, help="whether to use RNN or U(1)-RNN")
     args = parser.parse_args()
 
     # Load the model parameters
@@ -34,7 +44,7 @@ if __name__ == "__main__":
     gs_psi, dmrg_energy = load_observables(args.system_size)
 
     # initialize the model
-    rnn = RNN(hidden=hidden_units, system_size=args.system_size, seed=random_seed, symmetric=True)
+    rnn = RNN(hidden=hidden_units, system_size=args.system_size, seed=random_seed, symmetric=args.symmetric)
 
     # start training
     import time

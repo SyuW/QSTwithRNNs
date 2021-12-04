@@ -1,7 +1,7 @@
 """
 Recurrent neural network
 
-Authors: Uzair Lakhani, Luc Andre Ouellet, Jefferson Pule Mendez
+Authors: Uzair Lakhani, Luc Andre Ouellet, Jefferson Pule Mendez, Sam Yu
 """
 
 import torch
@@ -203,6 +203,7 @@ class RNN(nn.Module):
         N_neg = N_sampled_spins - N_pos
         N_half = num_spins / 2
         heaviside = torch.where(torch.cat([N_neg, N_pos], dim=1) >= N_half, 0, 1)
+
         return (prob * heaviside) / (torch.sum(prob * heaviside, dim=1, keepdim=True))
 
 
@@ -213,12 +214,12 @@ if __name__ == "__main__":
 
     model = RNN(hidden_units, sys_size, random_seed, symmetric=False)
     test = torch.tensor([[1, 0, 0, 1], [0, 1, 1, 0], [1, 0, 1, 0], [1, 1, 0, 0], [0, 1, 0, 1],
-                         [0, 0, 1, 1]])  # DATA SHOULD BE OUR BATCHES IN TRAINING
+                         [0, 0, 1, 1]])
 
     # probs and same sample
-    s, p = model.get_samples_and_probs(batch=test, get_same_sample=True, verbose=False)
+    s, p = model.get_samples_and_probs(batch=test, get_same_sample=True)
 
     # probs and new sample
-    s, p = model.get_samples_and_probs(n_samples=30, get_same_sample=False, verbose=False)
+    s, p = model.get_samples_and_probs(n_samples=30, get_same_sample=False)
 
     energy = model.calculate_xy_energy(s)
