@@ -11,6 +11,15 @@ import torch.nn as nn
 class RNN(nn.Module):
 
     def __init__(self, hidden, system_size, seed, symmetric=False):
+        """
+        constructor for RNN
+
+        :param hidden:
+        :param system_size:
+        :param seed:
+        :param symmetric:
+        """
+
         super(RNN, self).__init__()
 
         # parameters
@@ -80,8 +89,9 @@ class RNN(nn.Module):
 
     def calculate_xy_energy(self, samples):
         """
+        calculate the expected energy given the XY hamiltonian
 
-        :param samples:
+        :param samples: sampled spin configurations
         :return:
         """
         # initial energy as tensor of shape (batch_size, 1)
@@ -180,6 +190,13 @@ class RNN(nn.Module):
 
     @staticmethod
     def enforce_symmetry(prob, sampled_spins, num_spins):
+        """
+
+        :param prob:
+        :param sampled_spins:
+        :param num_spins:
+        :return:
+        """
 
         N_sampled_spins = sampled_spins.size()[1]
         N_pos = torch.sum(sampled_spins, dim=1, keepdim=True)

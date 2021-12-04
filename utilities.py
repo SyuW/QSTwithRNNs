@@ -56,7 +56,7 @@ def calculate_nonzero_sz_percent(samples):
 
 def transform_states_to_binary(samples):
     """
-    convert the samples to binary
+    convert the samples to binary -
     :param samples:
     :return:
     """
