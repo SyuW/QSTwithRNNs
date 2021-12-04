@@ -1,5 +1,6 @@
 """
 Training procedure
+
 Authors: Sam Yu, Jefferson Pule Mendez, Luc Andre Ouellet
 """
 
@@ -10,7 +11,6 @@ import torch
 import torch.optim as optim
 import numpy as np
 
-# custom imports
 from utilities import calculate_nonzero_sz_percent, compute_fidelity
 
 

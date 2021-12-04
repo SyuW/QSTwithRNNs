@@ -1,12 +1,16 @@
 """
 Functions for visualizing the results
 
-Authors: Uzair Lakhani, Sam Yu
+Authors: Uzair Lakhani, Sam Yu, Jefferson Pule Mendez
 """
 
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import pickle
+import seaborn as sns
+
+sns.set_theme()
 
 
 def plot_energy_diffs(num_spins, in_path, scaling, plot_every=1):
@@ -72,7 +76,6 @@ def plot_loss_values(num_spins, in_path):
     epochs_symm_false = np.arange(len(loss_symm_false)) + 1
 
     # plot everything
-    epochs = np.arange(len(loss_symm_true)) + 1
     ax.plot(epochs_symm_true, loss_symm_true, marker=">", color="red", markevery=100, label="U(1)-RNN")
     ax.plot(epochs_symm_false, loss_symm_false, marker="<", color="blue", markevery=100, label="RNN")
     ax.legend()
@@ -108,6 +111,94 @@ def plot_nonzero_sz(num_spins, in_path, plot_every):
     return fig
 
 
+def u_1_rnn_fidelity(num_spins):
+    with open(f"results/N={num_spins}/N={num_spins}psi_N={num_spins}_RNN.pkl", "rb") as f:
+        psi_RNN = pickle.load(f)
+
+    with open(f"results/N={num_spins}/N={num_spins}psi_N={num_spins}_U(1).pkl", "rb") as file:
+        psi_U_1 = pickle.load(file)
+    print(len(psi_RNN))
+    print(len(psi_U_1))
+    fidelity = []
+
+    for epoch in range(len(psi_RNN)):
+
+        fidelity_epoch = 0
+        psi_RNN_dic = dict()
+        psi_U_1_dic = dict()
+        psi_RNN_epoch = np.array(psi_RNN[epoch])
+        psi_U_1_epoch = np.array(psi_U_1[epoch])
+
+        for sigma in range(len(psi_RNN_epoch)):
+            psi_RNN_dic[int(psi_RNN_epoch[sigma][0])] = psi_RNN_epoch[sigma][1]
+
+        for sigma in range(len(psi_U_1_epoch)):
+            psi_U_1_dic[int(psi_U_1_epoch[sigma][0])] = psi_U_1_epoch[sigma][1]
+
+        for i in psi_U_1_dic:
+
+            if i in psi_RNN_dic:
+                fidelity_epoch += psi_U_1_dic[i] * psi_RNN_dic[i]
+
+        fidelity.append(fidelity_epoch ** 2)
+
+    fidelity = np.array(fidelity)
+    np.save(f"results/N={num_spins}/infidelity_N_{num_spins}_U_1_RNN.npy", 1 - fidelity)
+
+    return fidelity
+
+
+def plot_infidelity(num_spins, in_path):
+    """
+    Plot the infidelity during training
+
+    :param num_spins:
+    :param in_path:
+    :return:
+    """
+
+    with plt.ioff():
+        fig, ax = plt.subplots()
+
+    path = os.path.join(in_path, f"N={num_spins}")
+
+    symm = ['True', 'False']
+    color = ['r', 'b']
+    for i in range(len(symm)):
+        data = np.load(os.path.join(path, f'infidelity_N_{num_spins}_symm_{symm[i]}.npy'))
+        ax.plot(np.arange(2000)[::30], data[::30], marker="v", markevery=1, color=color[i])
+
+    ax.legend(['U(1)-RNN', 'RNN'])
+    ax.set_xlabel("Epochs")
+    ax.set_ylabel("1-F")
+    ax.set_title(f"N={num_spins}")
+    ax.set_yscale('log')
+    return fig
+
+
+def plot_infidelity_u1_rnn(num_spins, in_path):
+    """
+    Plot the infidelity between U1 RNN and RNN during training
+
+    :param num_spins:
+    :param in_path:
+    :return:
+    """
+
+    with plt.ioff():
+        fig, ax = plt.subplots()
+
+    path = os.path.join(in_path, f"N={num_spins}")
+    data = np.load(os.path.join(path, f'infidelity_N_{num_spins}_U_1_RNN.npy'))
+    ax.plot(np.arange(2000)[::30], data[::30], marker="v")
+
+    ax.set_xlabel("Epochs")
+    ax.set_ylabel("1-F")
+    ax.set_title(f"Plot of infidelity between U1 RNN and RNN during training for N={num_spins}")
+    ax.set_yscale('log')
+    return fig
+
+
 if __name__ == "__main__":
 
     results_path = "final_results/"
@@ -117,6 +208,11 @@ if __name__ == "__main__":
     for N in [4, 10]:
         energy_fig = plot_energy_diffs(num_spins=N, in_path=results_path, scaling="log", plot_every=19)
         energy_fig.savefig(os.path.join("figures", f"energy_diff_N_{N}.png"))
+
+    # figure 4 from paper - infidelity plots
+    for N in [4, 10]:
+        infidelity = plot_infidelity(num_spins=N, in_path=results_path)
+        infidelity.savefig(os.path.join("figures", f"infidelity_N_{N}.png"))
 
     # figure 5 from paper - energy differences
     for N in [20, 30]:
@@ -133,3 +229,12 @@ if __name__ == "__main__":
         sz_nonzero_fig = plot_nonzero_sz(num_spins=N, in_path=results_path, plot_every=20)
         sz_nonzero_fig.savefig(os.path.join("figures", f"sz_N_{N}.png"))
 
+    # figure 4 from paper - infidelity plots
+    for N in [4, 10]:
+        infidelity = plot_infidelity(num_spins=N, in_path=results_path)
+        infidelity.savefig(os.path.join("figures", f"infidelity_N_{N}.png"))
+
+    # infidelity plots between RNN and U1 RNN - requested during midterm presentation
+    for N in [4, 10]:
+        infidelity_U1_RNN = plot_infidelity_u1_rnn(num_spins=N, in_path=results_path)
+        infidelity_U1_RNN.savefig(os.path.join("figures", f"infidelity_U_1_RNN_N_{N}.png"))

@@ -222,4 +222,5 @@ if __name__ == "__main__":
     # probs and new sample
     s, p = model.get_samples_and_probs(n_samples=30, get_same_sample=False)
 
+    # estimate the XY ground state energy from generated samples
     energy = model.calculate_xy_energy(s)

@@ -28,8 +28,10 @@ def load_observables(N):
 
     :param N:
     :return:
-    """
 
+    :param N:
+    :return:
+    """
     if N in [2, 4, 10]:
         psi_N = np.loadtxt("data/psi_N=" + str(N))
     else:
@@ -39,6 +41,7 @@ def load_observables(N):
     energies_dict = dict()
     for i, n in enumerate(energies[:, 0]):
         energies_dict[n] = energies[i, 1]
+
     energy = energies_dict[N]
 
     return psi_N[:, 0], energy
@@ -48,6 +51,8 @@ def calculate_nonzero_sz_percent(samples):
     """
     Compute the percentage of samples with non-zero net magnetization
 
+    :param samples:
+    :return:
     :param samples:
     :return:
     """
@@ -70,9 +75,9 @@ def transform_states_to_binary(samples):
 
     for i in range(samples.shape[1]):
         samples[:, samples.shape[1] - i - 1] *= 2 ** i
-        samples_in_bin = torch.sum(samples, dim=1, keepdim=True)
+        samples_in_binary = torch.sum(samples, dim=1, keepdim=True)
 
-    return samples_in_bin
+    return samples_in_binary
 
 
 def compute_fidelity(samples, probs, _gs_psi):

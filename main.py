@@ -12,7 +12,6 @@ import json
 from RNN import RNN
 from training import train
 from utilities import load_data, load_observables
-from visualizations import plot_energy_diffs, plot_loss_values, plot_nonzero_sz
 
 if __name__ == "__main__":
 
