@@ -4,18 +4,22 @@ Recurrent neural network
 Authors: Uzair Lakhani, Luc Andre Ouellet, Jefferson Pule Mendez
 """
 
-import argparse
-
-import numpy as np
 
 import torch
 import torch.nn as nn
-import json
 
 
 class RNN(nn.Module):
 
     def __init__(self, hidden, system_size, seed, symmetric=False):
+        """
+        constructor for RNN
+
+        :param hidden:
+        :param system_size:
+        :param seed:
+        :param symmetric:
+        """
         super(RNN, self).__init__()
 
         # parameters
@@ -209,4 +213,5 @@ if __name__ == "__main__":
     # probs and new sample
     s, p = model.get_samples_and_probs(n_samples=30, get_same_sample=False, verbose=False)
 
+    # estimate the XY ground state energy from generated samples
     energy = model.calculate_xy_energy(s)

@@ -136,7 +136,7 @@ dmypy.json
 __/pycache__/
 
 # Outputs
-#*.png
+*.png
 #*.txt
 #*.npy
 #*.pkl
