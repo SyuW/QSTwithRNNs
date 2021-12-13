@@ -28,9 +28,6 @@ def load_observables(N):
 
     :param N:
     :return:
-
-    :param N:
-    :return:
     """
     if N in [2, 4, 10]:
         psi_N = np.loadtxt("data/psi_N=" + str(N))

@@ -205,7 +205,6 @@ if __name__ == "__main__":
     os.makedirs(results_path, exist_ok=True)
     os.makedirs("figures", exist_ok=True)
 
-
     # figure 4 from paper - energy differences
     for N in [4, 10]:
         energy_fig = plot_energy_diffs(num_spins=N, in_path=results_path, scaling="log", plot_every=19)
@@ -217,7 +216,7 @@ if __name__ == "__main__":
         infidelity.savefig(os.path.join("figures", f"infidelity_N_{N}.png"))
 
     # figure 5 from paper - energy differences
-    for N in [20, 30]:
+    for N in [10, 20, 30]:
         energy_fig = plot_energy_diffs(num_spins=N, in_path=results_path, scaling="normal", plot_every=19)
         energy_fig.savefig(os.path.join("figures", f"energy_diff_N_{N}.png"))
 

@@ -1,8 +1,7 @@
 {
   "training": {
     "learning rate": 0.001,
-    "random seed": 1,
-    "epochs": 5,
+    "epochs": 50,
     "display epochs": 10
   },
 

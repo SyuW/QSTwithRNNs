@@ -20,15 +20,18 @@ if __name__ == "__main__":
     parser.add_argument("-json", default="params/params.json", help="input path to json file")
     parser.add_argument("-system_size", type=int, default=4, help="Size of our system. Default 10")
     parser.add_argument("-results_path", default="results", help="file path to results")
-    parser.add_argument("-symmetric", type=bool, help="whether to use RNN or U(1)-RNN")
+    parser.add_argument("-symmetric", type=int, help="Whether to use RNN or U(1)-RNN. 0 - RNN, 1 - U(1)")
     args = parser.parse_args()
+
+    # input screening
+    if args.system_size not in [2, 4, 6, 8, 10, 16, 20, 30, 40, 50]:
+        raise ValueError(f"Chosen system size {args.system_size} not in data")
 
     # Load the model parameters
     with open(args.json, 'r') as f:
         params = json.load(f)
 
         lr = params['training']['learning rate']
-        random_seed = params['training']['random seed']  # Where do we define the random seed
         epochs = params['training']['epochs']
         de = params['training']['display epochs']
         hidden_units = params['model']['hidden units']
@@ -43,7 +46,7 @@ if __name__ == "__main__":
     gs_psi, dmrg_energy = load_observables(args.system_size)
 
     # initialize the model
-    rnn = RNN(hidden=hidden_units, system_size=args.system_size, seed=random_seed, symmetric=args.symmetric)
+    rnn = RNN(hidden=hidden_units, system_size=args.system_size, symmetric=args.symmetric)
 
     # start training
     import time
