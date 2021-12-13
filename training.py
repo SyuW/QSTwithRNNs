@@ -61,7 +61,7 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate,
             optimizer.zero_grad()
 
             # calculate probabilities
-            sampled_spins, probs = model.get_samples_and_probs(batch=batch, get_same_sample=True, verbose=False)
+            sampled_spins, probs = model.get_samples_and_probs(batch=batch, get_same_sample=True)
             config_probabilities = torch.prod(probs, dim=1, keepdim=True)
 
             # compute the loss
@@ -75,7 +75,7 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate,
         with torch.no_grad():
 
             # calculate percentage of samples with Sz non-zero
-            samples, samples_probs = model.get_samples_and_probs(n_samples=1000, get_same_sample=False, verbose=False)
+            samples, samples_probs = model.get_samples_and_probs(n_samples=1000, get_same_sample=False)
             nonzero_sz_percent = calculate_nonzero_sz_percent(samples)
             nonzero_sz_vals.append(nonzero_sz_percent)
 
@@ -84,23 +84,28 @@ def train(model, data, results_path, num_epochs, display_epochs, learning_rate,
             energy_diff = torch.abs(rnn_energy_per_spin - truth_energy)
             energy_diff_vals.append(energy_diff)
 
-            # calculate the fidelity if
+            # calculate the fidelity if system
             if int(model.num_spins) in [2, 4, 10]:
                 fidelity, RNN_psi_sigmas = compute_fidelity(samples, samples_probs, truth_psi)
                 infidelity_vals.append(1 - fidelity)
                 RNN_psi_sigmas_epochs.append(RNN_psi_sigmas)
             else:
-                fidelity = 0
+                fidelity = None
 
         # use loss value for last batch of epoch for plot
         obj_vals.append(obj_val.item())
 
         # print out the epoch and loss value every display_epochs
         if (epoch + 1) % display_epochs == 0:
-            print((f"Epoch [{epoch + 1}/{num_epochs}]"
-                   f"\tLoss: {obj_val:.4f}"
-                   f"\tInfidelity: {1 - fidelity:.4f}"
-                   f"\tEnergy difference: {energy_diff:.4f}"))
+            if fidelity is not None:
+                print((f"Epoch [{epoch + 1}/{num_epochs}]"
+                       f"\tLoss: {obj_val:.4f}"
+                       f"\tInfidelity: {1 - fidelity:.4f}"
+                       f"\tEnergy difference: {energy_diff:.4f}"))
+            else:
+                print((f"Epoch [{epoch + 1}/{num_epochs}]"
+                       f"\tLoss: {obj_val:.4f}"
+                       f"\tEnergy difference: {energy_diff:.4f}"))
 
     # Save psi's:
     if int(model.num_spins) in [2, 4, 10]:

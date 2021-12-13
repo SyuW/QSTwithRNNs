@@ -10,13 +10,12 @@ import torch.nn as nn
 
 class RNN(nn.Module):
 
-    def __init__(self, hidden, system_size, seed, symmetric=False):
+    def __init__(self, hidden, system_size, symmetric=False):
         """
         constructor for RNN
 
         :param hidden:
         :param system_size:
-        :param seed:
         :param symmetric:
         """
 
@@ -24,7 +23,6 @@ class RNN(nn.Module):
 
         # parameters
         self.hidden_units = hidden
-        self.random_seed = seed
         self.num_spins = system_size
 
         # whether to impose U(1) symmetry on RNN
@@ -87,6 +85,79 @@ class RNN(nn.Module):
 
         return sample_sigma_n, sigma_n_encoded, conditional_prob
 
+    def get_samples_and_probs(self, batch=[], n_samples=30, get_same_sample=False):
+        """
+        Function sequentially performs num_spins iterations returning for each iteration
+        a sample sigma_i and its conditional probability. The output are two tensors containing
+        the sampled spins and the individual conditional probabilities.
+
+        :param get_same_sample:
+        :param batch: pytorch tensor. the data set for training. (useful when data is not required).
+        :param n_samples: int. number of spin configuration samples to generate.
+        :return: sampled_spins, probabilities
+        """
+
+        # infer batch size from training dataset
+        if get_same_sample:
+            batch_size = batch.shape[0]
+        # else, if sampling, use n_samples parameter
+        else:
+            batch_size = n_samples
+
+        # initialize probabilities and sampled spins to zero
+        probabilities = torch.zeros(size=(batch_size, 1))
+        sampled_spins = torch.zeros(size=(batch_size, 1))
+
+        # initialize the hidden vector and the initial spin for RNN
+        input_batch = torch.zeros(size=(batch_size,)).long()
+        h_n = torch.zeros(size=(batch_size, self.hidden_units)).float()
+        sigma_n = torch.nn.functional.one_hot(input_batch, num_classes=2).float()
+
+        # iterate over spin configuration
+        for n in range(self.num_spins):
+
+            # update the hidden vector and obtain probability distribution for next spin
+            h_n, prob = self.forward(sigma_n, h_n)
+
+            # impose symmetry
+            if self.symmetry:
+                if n != 0:
+                    prob = self.enforce_symmetry(prob, sampled_spins, self.num_spins)
+
+            # get the next spin
+            sampled_spin, sigma_n, conditional_prob = self.get_next_spin_and_prob(n, prob, batch, get_same_sample)
+
+            # if initial recurrent cell, simply add since variables were initialized to zero
+            if n == 0:
+                probabilities = torch.add(probabilities, conditional_prob)
+                sampled_spins = torch.add(sampled_spins, sampled_spin)
+
+            # else, concatenate
+            else:
+                probabilities = torch.cat([probabilities, conditional_prob], dim=1)
+                sampled_spins = torch.cat([sampled_spins, sampled_spin], dim=1)
+
+        return sampled_spins, probabilities
+
+    @staticmethod
+    def enforce_symmetry(prob, sampled_spins, num_spins):
+        """
+        enforce symmetry when calculating probabilities
+
+        :param prob:
+        :param sampled_spins:
+        :param num_spins:
+        :return:
+        """
+
+        N_sampled_spins = sampled_spins.size()[1]
+        N_pos = torch.sum(sampled_spins, dim=1, keepdim=True)
+        N_neg = N_sampled_spins - N_pos
+        N_half = num_spins / 2
+        heaviside = torch.where(torch.cat([N_neg, N_pos], dim=1) >= N_half, 0, 1)
+
+        return (prob * heaviside) / (torch.sum(prob * heaviside, dim=1, keepdim=True))
+
     def calculate_xy_energy(self, samples):
         """
         calculate the expected energy given the XY hamiltonian
@@ -94,6 +165,7 @@ class RNN(nn.Module):
         :param samples: sampled spin configurations
         :return:
         """
+
         # initial energy as tensor of shape (batch_size, 1)
         E = torch.zeros(samples.shape[0])
 
@@ -122,97 +194,12 @@ class RNN(nn.Module):
 
         return torch.mean(E)
 
-    def get_samples_and_probs(self, batch=[], n_samples=30, get_same_sample=False, verbose=False):
-        """
-        Function sequentially performs num_spins iterations returning for each iteration
-        a sample sigma_i and its conditional probability. The output are two tensors containing
-        the sampled spins and the individual conditional probabilities.
-
-        :param get_same_sample:
-        :param batch: pytorch tensor. the data set for training. (useful when data is not required).
-        :param n_samples: int. number of spin configuration samples to generate.
-        :param verbose: boolean. verbosity level.
-
-        :return: sampled_spins, probabilities
-        """
-
-        # infer batch size from training dataset
-        if get_same_sample:
-            batch_size = batch.shape[0]
-        # else, if sampling, use n_samples parameter
-        else:
-            batch_size = n_samples
-
-        # initialize probabilities and sampled spins to zero
-        probabilities = torch.zeros(size=(batch_size, 1))
-        sampled_spins = torch.zeros(size=(batch_size, 1))
-
-        # initialize the hidden vector and the initial spin for RNN
-        input_batch = torch.zeros(size=(batch_size,)).long()
-        h_n = torch.zeros(size=(batch_size, self.hidden_units)).float()
-        sigma_n = torch.nn.functional.one_hot(input_batch, num_classes=2).float()
-
-        # iterate over spin configuration
-        for n in range(self.num_spins):
-
-            if verbose:
-                print(f"Spin No. {n}")
-
-            # update the hidden vector and obtain probability distribution for next spin
-            h_n, prob = self.forward(sigma_n, h_n)
-
-            # impose symmetry
-            if self.symmetry:
-                if n != 0:
-                    prob = self.enforce_symmetry(prob, sampled_spins, self.num_spins)
-
-            # get the next spin
-            sampled_spin, sigma_n, conditional_prob = self.get_next_spin_and_prob(n, prob, batch, get_same_sample)
-
-            # if initial recurrent cell, simply add since variables were initialized to zero
-            if n == 0:
-                probabilities = torch.add(probabilities, conditional_prob)
-                sampled_spins = torch.add(sampled_spins, sampled_spin)
-
-            # else, concatenate
-            else:
-                probabilities = torch.cat([probabilities, conditional_prob], dim=1)
-                sampled_spins = torch.cat([sampled_spins, sampled_spin], dim=1)
-
-        if verbose:
-            print(f"Symmetry: {self.symmetry}")
-            print(f"Training mode: {get_same_sample}")
-            print(f"Probabilities: {probabilities}")
-            print(f"Generated sample: {sampled_spins}")
-            print(f"Input data: {batch}")
-
-        return sampled_spins, probabilities
-
-    @staticmethod
-    def enforce_symmetry(prob, sampled_spins, num_spins):
-        """
-
-        :param prob:
-        :param sampled_spins:
-        :param num_spins:
-        :return:
-        """
-
-        N_sampled_spins = sampled_spins.size()[1]
-        N_pos = torch.sum(sampled_spins, dim=1, keepdim=True)
-        N_neg = N_sampled_spins - N_pos
-        N_half = num_spins / 2
-        heaviside = torch.where(torch.cat([N_neg, N_pos], dim=1) >= N_half, 0, 1)
-
-        return (prob * heaviside) / (torch.sum(prob * heaviside, dim=1, keepdim=True))
-
 
 if __name__ == "__main__":
     hidden_units = 100
-    random_seed = 1
     sys_size = 4
 
-    model = RNN(hidden_units, sys_size, random_seed, symmetric=False)
+    model = RNN(hidden_units, sys_size, symmetric=False)
     test = torch.tensor([[1, 0, 0, 1], [0, 1, 1, 0], [1, 0, 1, 0], [1, 1, 0, 0], [0, 1, 0, 1],
                          [0, 0, 1, 1]])
 
