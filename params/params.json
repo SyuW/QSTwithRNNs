@@ -11,9 +11,5 @@
 
   "model": {
     "hidden units": 100
-  },
-
-  "misc": {
-    "verbose": 1
   }
 }
