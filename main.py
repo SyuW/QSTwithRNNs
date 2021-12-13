@@ -46,7 +46,7 @@ if __name__ == "__main__":
     gs_psi, dmrg_energy = load_observables(args.system_size)
 
     # initialize the model
-    rnn = RNN(hidden=hidden_units, system_size=args.system_size, symmetric=args.symmetric)
+    rnn = RNN(hidden=hidden_units, system_size=args.system_size, symmetric=bool(args.symmetric))
 
     # start training
     import time
