@@ -1,6 +1,14 @@
 # Phys 449 Final Project
 
-Final project for Phys 449 taken during Fall 2021 with Pooya Ronagh.
+Final project for Phys 449: Machine Learning in Physics taken during Fall 2021 with Pooya Ronagh.
+
+Reproducing the results of a recently published paper https://journals.aps.org/pra/abstract/10.1103/PhysRevA.104.012401, we built a recurrent neural network that can reconstruct the spin-1/2 XY model's ground state wavefunction after training on density matrix renormalization group (DMRG) data. The spin-1/2 XY model has the following Hamiltonian:
+
+$$
+  H = -J\sum_{\braket{ij}}(S_i^xS_i^x + S_i^yS_j^y)
+$$
+
+where $\braket{ij}$ denotes nearest neighbor pairs over a one dimensional lattice of spins. The main innovation of the paper is the incorporation of the Hamiltonian's $U(1)$ symmetry within the network's architecture, which greatly improves its convergence.
 
 # How to run
 
@@ -59,3 +67,9 @@ The JSON file contains hyperparameters that can be found and changed:
 - `final_results` contains final results presented after training
 - `notebooks` contains notebooks that were used to plot results
 - `params` contains the json file with the values used to analyze the data
+
+# Group Members/Authors
+- Jefferson Pule Mendez
+- Luc Andre Ouellet
+- Uzair Lakhani
+- Sam Yu
