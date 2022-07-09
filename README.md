@@ -68,7 +68,7 @@ The JSON file contains hyperparameters that can be found and changed:
 - `notebooks` contains notebooks that were used to plot results
 - `params` contains the json file with the values used to analyze the data
 
-# Group Members/Authors
+# Contributors
 - Jefferson Pule Mendez
 - Luc Andre Ouellet
 - Uzair Lakhani
