@@ -1,4 +1,4 @@
-# Phys 449 Final Project
+# Quantum State Tomography with U(1)-symmetric RNNs
 
 Final project for Phys 449: Machine Learning in Physics taken during Fall 2021 with Pooya Ronagh.
 
