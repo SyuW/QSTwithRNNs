@@ -2,7 +2,7 @@
 
 Final project for Phys 449: Machine Learning in Physics taken during Fall 2021 with Pooya Ronagh.
 
-Reproducing the results of a recently published paper https://journals.aps.org/pra/abstract/10.1103/PhysRevA.104.012401, we built a recurrent neural network that can reconstruct the spin-1/2 XY model's ground state wavefunction after training on density matrix renormalization group (DMRG) data.
+Reproducing the results of a recently published paper https://journals.aps.org/pra/abstract/10.1103/PhysRevA.104.012401, we built a recurrent neural network that can reconstruct the spin-1/2 XY model's ground state wavefunction after training on sampled data using the density matrix renormalization group (DMRG) technique.
 
 The spin-1/2 XY model has the following Hamiltonian:
 
